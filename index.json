@@ -1,4 +1,21 @@
 {
   "spec": "agent-index/v1",
-  "agents": {}
+  "agents": {
+    "cio": {
+      "name": "Neo CIO",
+      "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Speaks Chinese by default.",
+      "repo": "AIsa-team/agent-index",
+      "latest": "1.0.0",
+      "versions": {
+        "1.0.0": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.0/cio-hermes-v1.0.0.tar.gz",
+              "sha256": "c202c3bed8b07a2824035a4d18e4ad182f025a283f84d8517ad055ec276204db"
+            }
+          }
+        }
+      }
+    }
+  }
 }
