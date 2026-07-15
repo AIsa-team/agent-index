@@ -27,7 +27,7 @@
           "targets": {
             "hermes": {
               "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.2/cio-hermes-v1.0.2.tar.gz",
-              "sha256": "9aafaaa259e1c7a8609b0bbc4a133a097f8e05732e5bcecf159d0a87520ee1db"
+              "sha256": "f68f3be3f1f5ba2393193bee234fec5bb1428451b97108cba31b0bb67cbbe476"
             }
           }
         }
