@@ -5,7 +5,7 @@
       "name": "Neo CIO",
       "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Speaks Chinese by default.",
       "repo": "AIsa-team/agent-index",
-      "latest": "1.0.3",
+      "latest": "1.0.4",
       "versions": {
         "1.0.0": {
           "targets": {
@@ -30,8 +30,7 @@
               "sha256": "ea153a2a753f56aa45c8619609496396e504b1ad7a53a46b4a2419828d31caf6",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.2/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.2/install-hermes.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.2/guide-prompt-hermes.txt",
-              "e2bTemplateDev": "hermes-cio-dev"
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.2/guide-prompt-hermes.txt"
             }
           }
         },
@@ -43,8 +42,18 @@
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.3/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.3/install-hermes.sh",
               "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.3/guide-prompt-hermes.txt",
-              "e2bTemplateDev": "hermes-cio-1-0-3",
               "e2bTemplate": "hermes-cio-1-0-3"
+            }
+          }
+        },
+        "1.0.4": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.4/cio-hermes-v1.0.4.tar.gz",
+              "sha256": "82e4327ef4a7f52f2eabf88cadd0fc9e7f339a857aef073e5279a099beae3b68",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.4/INSTALL-hermes.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.4/install-hermes.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.4/guide-prompt-hermes.txt"
             }
           }
         }
