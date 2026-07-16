@@ -43,7 +43,8 @@
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.3/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.3/install-hermes.sh",
               "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.3/guide-prompt-hermes.txt",
-              "e2bTemplateDev": "hermes-cio-dev"
+              "e2bTemplateDev": "hermes-cio-1-0-3",
+              "e2bTemplate": "hermes-cio-1-0-3"
             }
           }
         }
