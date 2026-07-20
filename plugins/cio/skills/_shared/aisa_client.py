@@ -31,8 +31,11 @@ class AIsaConfig:
         if key:
             return key
         
-        # Fallback: try loading from .env files
+        # Fallback: try loading from credentials/.env files.
+        # ~/.aisa/credentials 是 plugin 安装形态的约定位置(无 hermes profile 可用),
+        # 排最前:plugin 引导流程写入后无需重启宿主即可生效
         env_paths = [
+            os.path.expanduser("~/.aisa/credentials"),
             os.path.expanduser("~/.hermes/.env"),
             os.path.expanduser("~/.hermes/profiles/manager/.env"),
         ]

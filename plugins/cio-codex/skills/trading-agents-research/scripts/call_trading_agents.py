@@ -44,6 +44,8 @@ _PROFILE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(S
 _ENV_PATHS = [
     os.path.join(_PROFILE_DIR, ".env"),
     os.path.join(os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes")), ".env"),
+    # plugin 安装形态的约定 key 文件(引导流程写入,写完即生效不用重启宿主)
+    os.path.expanduser("~/.aisa/credentials"),
 ]
 
 

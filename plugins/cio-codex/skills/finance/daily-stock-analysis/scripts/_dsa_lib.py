@@ -34,26 +34,30 @@ from typing import Any
 
 HERMES_HOME      = Path(os.environ.get("HERMES_HOME") or (Path.home() / ".hermes"))
 HERMES_ENV       = HERMES_HOME / ".env"
+# plugin 安装形态的约定 key 文件(引导流程写入,写完即生效不用重启宿主)
+AISA_CREDENTIALS = Path.home() / ".aisa" / "credentials"
 
 
 def load_env() -> None:
-    """Load Hermes ~/.hermes/.env into os.environ (without overriding existing vars).
+    """Load Hermes ~/.hermes/.env and ~/.aisa/credentials into os.environ
+    (without overriding existing vars).
 
     Sets GOOGLE_API_KEY / GEMINI_API_KEY / AISA_API_KEY for LiteLLM.
     """
-    if not HERMES_ENV.exists():
-        return
-    for raw in HERMES_ENV.read_text().splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
+    for env_file in (HERMES_ENV, AISA_CREDENTIALS):
+        if not env_file.exists():
             continue
-        if "=" not in line:
-            continue
-        key, val = line.split("=", 1)
-        key = key.strip()
-        val = val.split("#", 1)[0].strip().strip('"').strip("'")
-        if key and val and key not in os.environ:
-            os.environ[key] = val
+        for raw in env_file.read_text().splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            key = key.strip()
+            val = val.split("#", 1)[0].strip().strip('"').strip("'")
+            if key and val and key not in os.environ:
+                os.environ[key] = val
 
 
 # ─── Model routing (DeepSeek-v4-flash primary, DeepSeek-v4-pro fallback) ───────
