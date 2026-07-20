@@ -33,8 +33,8 @@ __REPORT_START__ <full report> + DONE: ... __REPORT_END__
 
 ## Files NOT touched (guarantees)
 
-- `${PORTFOLIO_DIR}/portfolio_truth.json` — read-only access
-- `${PORTFOLIO_DIR}/portfolio_rules.json` — never read
+- `~/.aisa/agents/cio/portfolio/portfolio_truth.json` — read-only access
+- `~/.aisa/agents/cio/portfolio/portfolio_rules.json` — never read
 - All other `portfolio-*` skills under `${CLAUDE_PLUGIN_ROOT}/skills/finance/`
 - `~/.hermes/config.yaml`, `~/.hermes/secrets/*.key`, `~/.hermes/channel_directory.json` — read-only
 - ubuntu user crontab (the 18:00 SGT portfolio_cron job is preserved as-is)

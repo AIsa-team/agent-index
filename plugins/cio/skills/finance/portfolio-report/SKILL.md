@@ -3,10 +3,10 @@ name: portfolio-report
 description: "AUTO-INVOKE when user says 'port' (exactly). Runs the live portfolio report script and returns output verbatim."
 ---
 
-> **Required environment** — before running scripts, verify these variables are set (`echo $VAR`):
-> - `PORTFOLIO_DIR` — required by this skill
-> If missing, STOP and tell the user to export it in the environment this plugin runs in
-> (e.g. shell profile or the host app's env settings). 不要静默失败 / do not fail silently.
+> **Data bootstrap** — this skill reads files under the user data directory.
+> If a path below does not exist yet, run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-data.sh"` first
+> (idempotent: seeds missing files from the plugin's bundled assets, never overwrites existing data).
+> - `~/.aisa/agents/cio/portfolio` — 组合数据目录（portfolio_truth.json / 引擎脚本）(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
 
 ## MANDATORY ROUTING RULE
 **This is a hard rule with no exceptions.** When the user's message is exactly `port` (case-insensitive, may have leading/trailing spaces, no other words):
@@ -28,7 +28,7 @@ Generates a live portfolio snapshot with real-time prices and FX rates. Runtime 
 ```python
 import subprocess, sys
 result = subprocess.run(
-    [sys.executable, "${PORTFOLIO_DIR}/portfolio_report.py"],
+    [sys.executable, "~/.aisa/agents/cio/portfolio/portfolio_report.py"],
     capture_output=True, text=True, timeout=300
 )
 if result.returncode != 0:
@@ -49,9 +49,9 @@ Look at the tool result. It MUST satisfy ALL of:
 4. The text between markers is NOT empty
 
 **IMPORTANT: Portfolio Truth Verification**
-The authoritative set of holdings is whatever is defined in `${PORTFOLIO_DIR}/portfolio_truth.json`. Do NOT assume any specific tickers — the script reads that file and prices it live. The presence of the `__DATA_SOURCE__:` line (emitted only by the real script) is the canonical proof that the output came from the configured truth file and not from memory or fabrication.
+The authoritative set of holdings is whatever is defined in `~/.aisa/agents/cio/portfolio/portfolio_truth.json`. Do NOT assume any specific tickers — the script reads that file and prices it live. The presence of the `__DATA_SOURCE__:` line (emitted only by the real script) is the canonical proof that the output came from the configured truth file and not from memory or fabrication.
 
-If the report is missing the `__DATA_SOURCE__:` line, OR it lists holdings that do not appear in `${PORTFOLIO_DIR}/portfolio_truth.json`, treat the data as fabricated and reject it.
+If the report is missing the `__DATA_SOURCE__:` line, OR it lists holdings that do not appear in `~/.aisa/agents/cio/portfolio/portfolio_truth.json`, treat the data as fabricated and reject it.
 
 If ANY check fails → reply ONLY with:
 `ERROR: 持仓报告执行失败（数据源校验未通过），请检查 portfolio_report.py 日志。`

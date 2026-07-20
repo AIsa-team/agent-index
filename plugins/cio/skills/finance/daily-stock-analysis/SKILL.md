@@ -8,9 +8,13 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 > `bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-venv.sh" dsa`
 > Then invoke scripts with `${CLAUDE_PLUGIN_ROOT}/.venvs/dsa/bin/python`. First run installs dependencies and can take a few minutes.
 
+> **Data bootstrap** — this skill reads files under the user data directory.
+> If a path below does not exist yet, run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-data.sh"` first
+> (idempotent: seeds missing files from the plugin's bundled assets, never overwrites existing data).
+> - `~/.aisa/agents/cio/portfolio` — 组合数据目录（portfolio_truth.json / 引擎脚本）(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
+
 > **Required environment** — before running scripts, verify these variables are set (`echo $VAR`):
 > - `AISA_API_KEY` — AISA multi-model gateway — default LLM + aisa-* skills (search / marketpulse / prediction-markets / twitter)
-> - `PORTFOLIO_DIR` — required by this skill
 > If missing, STOP and tell the user to export it in the environment this plugin runs in
 > (e.g. shell profile or the host app's env settings). 不要静默失败 / do not fail silently.
 
@@ -118,7 +122,7 @@ AISA gateway (which serves the DeepSeek models) is unreachable.
 - Scripts:    `${CLAUDE_PLUGIN_ROOT}/skills/finance/daily-stock-analysis/scripts/`
 - Shared lib: `_dsa_lib.py` (model routing, yfinance, formatting, report markers)
 - Venv python: `${CLAUDE_PLUGIN_ROOT}/.venvs/dsa/bin/python` (managed by the platform's `setup.python` step)
-- Holdings:   `${PORTFOLIO_DIR}/portfolio_truth.json` (read-only)
+- Holdings:   `~/.aisa/agents/cio/portfolio/portfolio_truth.json` (read-only)
 
 ## Hard guarantees
 

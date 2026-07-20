@@ -1,0 +1,23 @@
+{
+  "base_currency": "USD",
+  "fx_overrides": {"HKD_USD": 0.128, "JPY_USD": 0.0066, "SGD_USD": 0.74, "as_of": "2026-01-01"},
+  "classification_overrides": {"CODE:STRUCTNOTE": "US_EQUITY"},
+  "safety_ringfenced": ["CODE:PRIVATEFUND"],
+  "static_valuation": {"CODE:STRUCTNOTE": 50000.0, "DEMO00BOND0001": 50000.0},
+  "mmf_safety_allocation_usd": 100000,
+  "mmf_codes": ["CODE:MMF-USD", "CODE:MMF2"],
+  "liabilities": [{"name": "JP Margin Loan", "ccy": "JPY", "amount": 3000000.0}],
+  "bucket_overrides": {
+    "name::Cash USD": "tactical",
+    "name::MMF USD": "tactical",
+    "name::MMF2": "tactical",
+    "name::Cash SGD": "tactical",
+    "name::Demo Bond 2028": "cashflow",
+    "ticker::IAU": "hedge",
+    "name::PrivateFund": "safety",
+    "name::StructNote": "growth"
+  },
+  "gold_policy": {"floor_pct": 3, "pref_pct": 5, "upper_pct": 8},
+  "cash_policy": {"floor_pct": 5, "upper_pct": 12},
+  "single_name_caps": {"default_pct": 15}
+}
