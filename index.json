@@ -5,7 +5,7 @@
       "name": "AIsa CIO",
       "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Speaks Chinese by default.",
       "repo": "AIsa-team/agent-index",
-      "latest": "1.0.9",
+      "latest": "1.1.0",
       "versions": {
         "1.0.0": {
           "targets": {
@@ -113,6 +113,29 @@
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.9/install-hermes.sh",
               "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.0.9/guide-prompt-hermes.txt",
               "e2bTemplate": "hermes-cio-1-0-9"
+            }
+          }
+        },
+        "1.1.0": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.1.0/cio-hermes-v1.1.0.tar.gz",
+              "sha256": "1c04fa8bf709d9adb679744cdcbedd72c6315b425a3bf43636fff556d864e80f",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.1.0/INSTALL-hermes.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.1.0/install-hermes.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.1.0/guide-prompt-hermes.txt"
+            },
+            "claude-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "cio-v1.1.0",
+              "commit": "6824598d4542c9780329ef1de08773367520e466",
+              "path": "plugins/cio"
+            },
+            "codex-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "cio-v1.1.0",
+              "commit": "6824598d4542c9780329ef1de08773367520e466",
+              "path": "plugins/cio-codex"
             }
           }
         }
