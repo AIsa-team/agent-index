@@ -111,7 +111,8 @@
               "sha256": "c6e1dccdb8904ec6fb089af57028f2881181dfe8ee04922aa1e71b30ebf02a4a",
               "installMd": "https://github.com/AIsa-team/agents/releases/download/cio-v1.0.9/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agents/releases/download/cio-v1.0.9/install-hermes.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agents/releases/download/cio-v1.0.9/guide-prompt-hermes.txt"
+              "guidePrompt": "https://github.com/AIsa-team/agents/releases/download/cio-v1.0.9/guide-prompt-hermes.txt",
+              "e2bTemplate": "hermes-cio-1-0-9"
             }
           }
         }
