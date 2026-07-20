@@ -1,0 +1,14 @@
+{
+  "name": "aisa-agents",
+  "owner": {
+    "name": "AIsa"
+  },
+  "plugins": [
+    {
+      "name": "cio",
+      "source": "./plugins/cio",
+      "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Speaks Chinese by default.",
+      "version": "1.1.0"
+    }
+  ]
+}

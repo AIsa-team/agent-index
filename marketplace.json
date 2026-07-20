@@ -1,0 +1,19 @@
+{
+  "name": "aisa-agents",
+  "interface": {
+    "displayName": "AIsa Agents"
+  },
+  "plugins": [
+    {
+      "name": "cio",
+      "source": {
+        "source": "local",
+        "path": "./plugins/cio-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
