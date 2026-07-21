@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """version_info.py — CIO self-check: installed version, index latest, update health.
 
-Pure stdlib. Reads the AgentSpec install marker, compares with the public
-agent-index, and probes for update-loop activity evidence. Prints a report
-between __REPORT_START__ / __REPORT_END__ markers, followed by a DONE:/FAILED:
-status line (house style shared with the DSA scripts).
+Pure stdlib. Determines the running agent's content version, compares with the
+public agent-index, and reads content-update-loop logs to judge updater health.
+Prints a report between __REPORT_START__ / __REPORT_END__ markers, followed by
+a DONE:/FAILED: status line (house style shared with the DSA scripts).
 
-Data sources (in priority order):
-  1. $PROFILE_DIR/.agentspec.json   — install marker (agentspec-v1 §4.1)
-  2. $PROFILE_DIR/agent.json        — artifact-carried manifest snapshot
-  3. $PROFILE_DIR/agent.lock.json   — build lock (dev checkouts)
-  4. https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json
+Version truth sources (priority order, per 2026-07-21 E2B field investigation):
+  1. <profile>/.agentspec-content/active.json — content updater's active release
+     (E2B Level-2 layout; the authoritative content version)
+  2. <profile>/.agentspec.json               — install marker (agentspec-v1 §4.1)
+  3. <profile>/agent.json / agent.lock.json  — artifact/dev fallbacks
+Index: https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json
+
+Profile dir resolution (priority order):
+  1. argv[1]  2. $PROFILE_DIR  3. $HERMES_HOME  4. walk up from this script's
+  own path to the nearest dir containing agent.json / SOUL.md / .env.example
+  5. ~/.aisa/agents/cio
 """
 
 import json
@@ -24,23 +30,28 @@ from pathlib import Path
 INDEX_URL = "https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json"
 INDEX_TIMEOUT_S = 15
 DEFAULT_AGENT_ID = "cio"
+CDN_GRACE_S = 30 * 60          # index CDN cache can lag ~5-30 min after publish
+LOOP_STALE_S = 15 * 60         # no loop activity for this long => loop suspect
+LOG_TAIL_LINES = 8
 
-# Candidate files/dirs whose presence + mtime are evidence of update-loop activity.
-UPDATE_EVIDENCE_CANDIDATES = [
-    ".update-state.json",
-    ".agent-update.log",
-    "updates",
-    "releases",
-    "current",
-    "logs",
-]
+PROFILE_ANCHOR_FILES = ("agent.json", "SOUL.md", ".env.example")
 
 
-def profile_dir() -> Path:
-    raw = os.environ.get("PROFILE_DIR") or "~/.aisa/agents/cio"
+def resolve_profile_dir() -> Path:
     if len(sys.argv) > 1 and sys.argv[1].strip():
-        raw = sys.argv[1].strip()
-    return Path(raw).expanduser()
+        return Path(sys.argv[1].strip()).expanduser()
+    for env in ("PROFILE_DIR", "HERMES_HOME"):
+        v = os.environ.get(env)
+        if v:
+            return Path(v).expanduser()
+    # walk up from the script itself: works for both
+    #   <profile>/skills/ops/version-info/scripts/version_info.py          (user skills)
+    #   <profile>/.agentspec-content/current/skills/ops/.../version_info.py (managed)
+    here = Path(__file__).resolve()
+    for anc in here.parents:
+        if any((anc / f).exists() for f in PROFILE_ANCHOR_FILES):
+            return anc
+    return Path("~/.aisa/agents/cio").expanduser()
 
 
 def read_json(path: Path):
@@ -58,24 +69,31 @@ def semver_key(v: str):
         return None
 
 
+def fmt_age(epoch: float) -> str:
+    age_s = int(time.time() - epoch)
+    if age_s < 0:
+        return "未来时间?"
+    if age_s < 3600:
+        return f"{age_s // 60} 分钟前"
+    if age_s < 86400:
+        return f"{age_s // 3600} 小时前"
+    return f"{age_s // 86400} 天前"
+
+
+def fmt_ts(epoch: float) -> str:
+    dt = datetime.fromtimestamp(epoch, tz=timezone.utc).astimezone()
+    return f"{dt.strftime('%Y-%m-%d %H:%M:%S %Z')}（{fmt_age(epoch)}）"
+
+
 def fmt_mtime(path: Path) -> str:
     try:
-        ts = path.stat().st_mtime
+        return fmt_ts(path.stat().st_mtime)
     except OSError:
         return "unreadable"
-    dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone()
-    age_s = int(time.time() - ts)
-    if age_s < 3600:
-        age = f"{age_s // 60} 分钟前"
-    elif age_s < 86400:
-        age = f"{age_s // 3600} 小时前"
-    else:
-        age = f"{age_s // 86400} 天前"
-    return f"{dt.strftime('%Y-%m-%d %H:%M:%S %Z')}（{age}）"
 
 
 def fetch_index():
-    req = urllib.request.Request(INDEX_URL, headers={"User-Agent": "aisa-cio-version-info/1"})
+    req = urllib.request.Request(INDEX_URL, headers={"User-Agent": "aisa-cio-version-info/2"})
     try:
         with urllib.request.urlopen(req, timeout=INDEX_TIMEOUT_S) as resp:
             return json.loads(resp.read().decode("utf-8")), None
@@ -83,39 +101,67 @@ def fetch_index():
         return None, f"{type(e).__name__}: {e}"
 
 
+def find_update_log(pdir: Path):
+    home = Path(os.environ.get("HOME", "~")).expanduser()
+    for cand in (home / "content-update.log", pdir / "content-update.log",
+                 pdir / "logs" / "content-update.log"):
+        if cand.is_file():
+            return cand
+    return None
+
+
 def main() -> int:
-    pdir = profile_dir()
+    pdir = resolve_profile_dir()
     lines = []
     ok = True
 
     lines.append("=== CIO 版本与更新自检 ===")
-    lines.append(f"PROFILE_DIR: {pdir}")
+    lines.append(f"profile dir: {pdir}")
     lines.append("")
 
-    # --- 1. local installed version ---
+    # --- 1. local version (truth-source priority) ---
     agent_id = DEFAULT_AGENT_ID
     local_version = None
+    local_source = None
     pinned = None
+    updated_at = None
+
+    active = read_json(pdir / ".agentspec-content" / "active.json")
+    if active and active.get("version"):
+        agent_id = active.get("agentId", agent_id)
+        local_version = active["version"]
+        local_source = ".agentspec-content/active.json（内容更新器 active release）"
+        updated_at = active.get("updatedAt")
+        lines.append(f"[本地版本] {local_version}  ← {local_source}")
+        lines.append(f"  release={active.get('release')}")
+        if updated_at:
+            lines.append(f"  内容切换时间: {fmt_ts(updated_at)}")
+        rels = pdir / ".agentspec-content" / "releases"
+        if rels.is_dir():
+            names = sorted(p.name for p in rels.iterdir())
+            lines.append(f"  本地留存 releases: {', '.join(names[-4:])}")
+
     marker = read_json(pdir / ".agentspec.json")
     if marker:
-        agent_id = marker.get("id", agent_id)
-        local_version = marker.get("version")
         pinned = marker.get("pinned")
-        lines.append("[本地安装 marker] .agentspec.json")
-        lines.append(f"  id={agent_id}  version={local_version}  target={marker.get('target')}  pinned={pinned}")
-        lines.append(f"  marker 写入时间: {fmt_mtime(pdir / '.agentspec.json')}")
-    else:
-        lines.append("[本地安装 marker] .agentspec.json 不存在")
+        if local_version is None:
+            agent_id = marker.get("id", agent_id)
+            local_version = marker.get("version")
+            local_source = ".agentspec.json（安装 marker）"
+            lines.append(f"[本地版本] {local_version}  ← {local_source}")
+        lines.append(f"  marker: version={marker.get('version')}  target={marker.get('target')}  pinned={pinned}")
+
+    if local_version is None:
         for fb_name in ("agent.json", "agent.lock.json"):
             fb = read_json(pdir / fb_name)
             if fb and fb.get("version"):
                 agent_id = fb.get("agent") or fb.get("id") or agent_id
                 local_version = fb["version"]
-                lines.append(f"  fallback {fb_name}: version={local_version}")
+                local_source = f"{fb_name}（fallback）"
+                lines.append(f"[本地版本] {local_version}  ← {local_source}")
                 break
-        if local_version is None:
-            lines.append("  ⚠️ 未找到任何本地版本信息 —— 这通常是 dev 环境（非安装器安装），")
-            lines.append("     或安装未完成（marker 只在全部必需步骤成功后写入）。")
+    if local_version is None:
+        lines.append("[本地版本] ⚠️ 未找到任何版本信息 —— dev 环境（非安装器安装）或安装未完成。")
     lines.append("")
 
     # --- 2. index latest ---
@@ -124,15 +170,40 @@ def main() -> int:
     if index:
         entry = (index.get("agents") or {}).get(agent_id) or {}
         latest = entry.get("latest")
-        lines.append(f"[中心索引] {INDEX_URL}")
-        lines.append(f"  {agent_id} latest = {latest or '（索引中无此 agent）'}")
+        lines.append(f"[中心索引] latest = {latest or '（索引中无 ' + agent_id + '）'}")
     else:
         ok = False
         lines.append(f"[中心索引] 拉取失败: {index_err}")
         lines.append("  ⚠️ 无法判断是否落后于 latest。")
     lines.append("")
 
-    # --- 3. verdict ---
+    # --- 3. update loop health ---
+    log_path = find_update_log(pdir)
+    loop_recent = False
+    last_status = None
+    lines.append("[更新循环健康度]")
+    if log_path:
+        try:
+            mtime = log_path.stat().st_mtime
+            loop_recent = (time.time() - mtime) < LOOP_STALE_S
+            tail = log_path.read_text(errors="ignore").strip().splitlines()[-LOG_TAIL_LINES:]
+            lines.append(f"  日志: {log_path}  最后活动: {fmt_ts(mtime)}")
+            for ln in tail:
+                try:
+                    j = json.loads(ln)
+                    last_status = j.get("status", last_status)
+                    lines.append(f"    {j.get('status','?'):9s} version={j.get('version','?')}")
+                except (json.JSONDecodeError, AttributeError):
+                    lines.append(f"    {ln[-120:]}")
+            if not loop_recent:
+                lines.append(f"  ⚠️ 循环已 {fmt_age(mtime)} 无输出（正常应 ≤ 更新间隔，默认 300s）")
+        except OSError as e:
+            lines.append(f"  日志读取失败: {e}")
+    else:
+        lines.append("  未找到 content-update.log —— 本环境可能不运行内容更新循环（如本地 dev / CLI 安装）。")
+    lines.append("")
+
+    # --- 4. verdict ---
     lines.append("[结论]")
     lk, rk = semver_key(local_version or ""), semver_key(latest or "")
     if lk and rk:
@@ -140,27 +211,16 @@ def main() -> int:
             lines.append(f"  ✅ 本地 {local_version} == 索引 latest {latest}，已是最新。")
         elif lk < rk:
             if pinned:
-                lines.append(f"  📌 本地 {local_version} < latest {latest}，但 pinned=true —— 自动更新按契约不会收敛，这是显式钉住，不是故障。")
+                lines.append(f"  📌 本地 {local_version} < latest {latest}，但 pinned=true —— 显式钉住版本，不更新是契约行为，不是故障。")
+            elif loop_recent:
+                lines.append(f"  ⏳ 本地 {local_version} < latest {latest}，但更新循环活跃 —— 大概率是索引 CDN 缓存延迟（发布后 5–30 分钟属正常），稍后重查。")
+                lines.append(f"     若超过 {CDN_GRACE_S // 60} 分钟仍未收敛，再查 content-update.log 中的下载/SHA 报错。")
             else:
-                lines.append(f"  ⚠️ 本地 {local_version} < latest {latest} 且未 pinned —— 若超过一个更新周期（默认 300s）仍未收敛，更新循环可能异常。")
+                lines.append(f"  ⚠️ 本地 {local_version} < latest {latest}，且更新循环无近期活动 —— 更新器可能未运行或已卡死，检查 sandbox entrypoint 与 content-update.log。")
         else:
             lines.append(f"  ℹ️ 本地 {local_version} > latest {latest} —— 本地领先于索引（dev 版本或索引未发布）。")
     else:
         lines.append("  ⚠️ 版本比较不可用（本地或索引版本缺失）。")
-    lines.append("")
-
-    # --- 4. update-loop evidence ---
-    lines.append("[更新循环活动痕迹]（存在性 + mtime，仅供判断更新器是否在动）")
-    found_any = False
-    for name in UPDATE_EVIDENCE_CANDIDATES:
-        p = pdir / name
-        if p.exists() or p.is_symlink():
-            found_any = True
-            kind = "symlink" if p.is_symlink() else ("dir" if p.is_dir() else "file")
-            extra = f" -> {os.readlink(p)}" if p.is_symlink() else ""
-            lines.append(f"  {name} [{kind}]{extra}  mtime: {fmt_mtime(p)}")
-    if not found_any:
-        lines.append("  （未发现候选痕迹文件 —— 本环境可能不运行 sandbox 更新循环，或状态文件路径与候选名不符）")
     lines.append("")
 
     # --- 5. session caveat ---
