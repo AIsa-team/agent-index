@@ -5,7 +5,7 @@
       "name": "AIsa CIO",
       "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Speaks Chinese by default.",
       "repo": "AIsa-team/agent-index",
-      "latest": "1.1.9",
+      "latest": "1.2.0",
       "versions": {
         "1.0.0": {
           "targets": {
@@ -357,6 +357,31 @@
               "commit": "c2d6a11979749b5bb89afc0d09073d20c945ca90",
               "path": "plugins/cio-codex",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.1.9/INSTALL-codex.md"
+            }
+          }
+        },
+        "1.2.0": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/cio-hermes-v1.2.0.tar.gz",
+              "sha256": "32975bc5ad2881300647330e42528ced3ede744b4ab5f3c68ce8e2925dff6547",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/INSTALL-hermes.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/install-hermes.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/guide-prompt-hermes.txt"
+            },
+            "claude-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "cio-v1.2.0",
+              "commit": "97abad2a2fc693cbdad61bd227439bf7349b905e",
+              "path": "plugins/cio",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/INSTALL-claudecode.md"
+            },
+            "codex-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "cio-v1.2.0",
+              "commit": "97abad2a2fc693cbdad61bd227439bf7349b905e",
+              "path": "plugins/cio-codex",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/INSTALL-codex.md"
             }
           }
         }
