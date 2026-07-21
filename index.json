@@ -5,7 +5,7 @@
       "name": "AIsa CIO",
       "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Speaks Chinese by default.",
       "repo": "AIsa-team/agent-index",
-      "latest": "1.2.0",
+      "latest": "1.2.1",
       "versions": {
         "1.0.0": {
           "targets": {
@@ -382,6 +382,38 @@
               "commit": "97abad2a2fc693cbdad61bd227439bf7349b905e",
               "path": "plugins/cio-codex",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.0/INSTALL-codex.md"
+            }
+          }
+        },
+        "1.2.1": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/cio-hermes-v1.2.1.tar.gz",
+              "sha256": "210ff30c73edf7dcc5d79c6e4f945f57e5e30a9d8f53d74567538ad56c7bd0c2",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/INSTALL-hermes.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/install-hermes.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/guide-prompt-hermes.txt"
+            },
+            "openclaw": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/cio-openclaw-v1.2.1.tar.gz",
+              "sha256": "550ad08c90e78ab8fe35dbc2976963426de2a8ba2b8f2a4271640412168065e3",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/INSTALL-openclaw.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/install-openclaw.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/guide-prompt-openclaw.txt"
+            },
+            "claude-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "cio-v1.2.1",
+              "commit": "b6bab7f98a6ea9b3c545a7e2e61f47b5a7a5d5ec",
+              "path": "plugins/cio",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/INSTALL-claudecode.md"
+            },
+            "codex-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "cio-v1.2.1",
+              "commit": "b6bab7f98a6ea9b3c545a7e2e61f47b5a7a5d5ec",
+              "path": "plugins/cio-codex",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.1/INSTALL-codex.md"
             }
           }
         }
