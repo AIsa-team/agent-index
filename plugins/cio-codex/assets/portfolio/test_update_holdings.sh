@@ -87,5 +87,12 @@ check "T5d bad lot rejected" 1 "not a lot" -- buy 0700.HK 1 1 --lot 0
 setup
 check "T6a full exit suggests remove" 0 "remove NVDA" -- sell NVDA 100
 
+# ── T7 atomic write leaves no leftover tmp file ──
+setup
+run_uh buy NVDA 10 100 >/dev/null 2>&1
+t7a() { [ ! -e "$TMP"/portfolio_truth.json.tmp ]; }
+if t7a; then printf "[PASS] T7a no leftover .tmp file after write\n"; PASS=$((PASS+1))
+else printf "[FAIL] T7a no leftover .tmp file after write\n"; FAIL=$((FAIL+1)); fi
+
 printf "\n%d passed, %d failed\n" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

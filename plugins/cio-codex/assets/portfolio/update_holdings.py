@@ -26,7 +26,7 @@ Examples:
   python3 update_holdings.py set  PrivateFund  value 100000
 """
 
-import json, sys, re, shutil
+import json, sys, re, shutil, os
 from datetime import date, datetime
 from pathlib import Path
 
@@ -79,8 +79,12 @@ def snapshot() -> Path:
 
 def save(positions: list):
     snap = snapshot()
-    with TRUTH_PATH.open('w') as f:
+    tmp_path = TRUTH_PATH.with_suffix('.json.tmp')
+    with tmp_path.open('w') as f:
         json.dump(positions, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, TRUTH_PATH)
     print(f"📸 snapshot: {snap.name}")
 
 def find_equity(positions, ticker: str) -> list[int]:
