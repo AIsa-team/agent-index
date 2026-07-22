@@ -490,7 +490,8 @@
               "sha256": "ff08cee8486c5a4ae1ac9cfaad3488db1d2938a94b71c511593c9b5652f9c700",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.4/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.4/install-hermes.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.4/guide-prompt-hermes.txt"
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.4/guide-prompt-hermes.txt",
+              "e2bTemplate": "hermes-cio-1-2-4"
             },
             "openclaw": {
               "url": "https://github.com/AIsa-team/agent-index/releases/download/cio-v1.2.4/cio-openclaw-v1.2.4.tar.gz",
