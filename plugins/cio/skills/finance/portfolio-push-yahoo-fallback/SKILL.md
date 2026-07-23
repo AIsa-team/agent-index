@@ -62,19 +62,19 @@ Computation
 Output (chat-friendly) [FORMAT LOCKED — see references/format_template_locked.txt; do not modify without explicit user request]
 - Three-line per holding layout (default):
   - Line 1: colored dot (🟢 gain, 🔴 loss, ⚪ flat) + *Name* (no ticker unless needed to disambiguate lots).
-  - Line 2: "价格 {CCY} {price:0.0000} · {+/-0.00% day change if available, else +0.00%}".
-  - Line 3: "持仓 {quantity} · 成本 {CCY} {unit_cost:0.0000}".
-  - Line 4: "市值 ${value_int} · 盈亏 {dot} ${pnl_int} ({+/-x.x%})".
-  - Quantity prints without trailing .00 when integer. Values print with thousand separators; 市值/盈亏 use integer dollars rounding; percentages round to 0.1%.
+  - Line 2: "Price {CCY} {price:0.0000} · {+/-0.00% day change if available, else +0.00%}".
+  - Line 3: "Qty {quantity} · Cost {CCY} {unit_cost:0.0000}".
+  - Line 4: "Value ${value_int} · PnL {dot} ${pnl_int} ({+/-x.x%})".
+  - Quantity prints without trailing .00 when integer. Values print with thousand separators; Value/PnL use integer dollars rounding; percentages round to 0.1%.
   - StructNote display rule: classify under US Equities; do NOT append [static] — show as a normal line with a colored dot.
   - Static/at-cost tags: keep [at cost] for Demo Bond 2028 when needed; omit [static] tags for cash/MMF/private to match the cleaner style.
 - Section subtotals: one bold-ish line (plain text) at the end of each section:
-  "*类别小计: $金额 · 🟢/🔴 +$盈亏 (+x.x%)*" (asterisks are literal, shown as-is in plain-text chat).
+  "*Subtotal: $amount · 🟢/🔴 +$pnl (+x.x%)*" (asterisks are literal, shown as-is in plain-text chat).
 - Overall summary at the end:
-  - 总市值
-  - 整体盈亏（含百分比）
-  - 扣除负债后净值（显示负债绝对额）
-  - 资产类别分布：每类金额与占组合百分比（x.x%）。
+  - Total market value
+  - Overall PnL (including percentage)
+  - Net value after liabilities (show the absolute liabilities amount)
+  - Asset-class breakdown: amount per class and its share of the portfolio (x.x%).
 - Headers and separators: use unicode lines like "━━━━━━━━━━━━━━━━━━━━" around section titles for readability.
 - Preserve existing emoji section titles and ordering.
 

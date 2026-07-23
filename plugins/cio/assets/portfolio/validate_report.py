@@ -33,7 +33,7 @@ KNOWN_FABRICATION_TICKERS = {'AAPL', 'TSLA', 'GOOGL', 'AMZN', 'MSFT'}
 # remove it from this set.
 
 # Section headers the real script always emits.
-REQUIRED_SECTION_FRAGMENTS = ['资产配置总览', '总净值']
+REQUIRED_SECTION_FRAGMENTS = ['Asset Allocation Overview', 'Total net worth']
 
 
 def _load_truth_tickers():

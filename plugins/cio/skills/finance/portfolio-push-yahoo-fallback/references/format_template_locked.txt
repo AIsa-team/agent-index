@@ -1,4 +1,4 @@
-PORTFOLIO PUSH FORMAT — LOCKED (effective 2026-04-14)
+PORTFOLIO PUSH FORMAT — LOCKED (English labels; effective 2026-07-22, supersedes 2026-04-14)
 
 This format is the default for all portfolio pushes (scheduled and /888) until the user explicitly asks to change it. Do not deviate.
 
@@ -21,29 +21,29 @@ Per holding (FOUR LINES):
   • Use the instrument Name (friendly), not the ticker, unless needed for lot disambiguation
   • StructNote: show under US, no brackets, treat as a normal position
 - Line 2: price line
-  • "价格 {CCY} {price:0.0000}"
+  • "Price {CCY} {price:0.0000}"
   • If day change is not reliably available, append "· +0.00%"
 - Line 3: position & unit cost line
-  • "持仓 {quantity} · 成本 {CCY} {unit_cost:0.0000}"
+  • "Qty {quantity} · Cost {CCY} {unit_cost:0.0000}"
   • Quantity prints without trailing .00 when integer
 - Line 4: market value & PnL line
-  • "市值 ${value_int} · 盈亏 {dot} ${pnl_int} ({+/-x.x%})"
+  • "Value ${value_int} · PnL {dot} ${pnl_int} ({+/-x.x%})"
   • Value and PnL are integer dollars with thousand separators; PnL% rounds to 0.1%
   • Use 🟢/🔴/⚪ dot again to reflect PnL sign
 
 Section subtotal (single line at the end of each section):
-- "*类别小计: $金额 · 🟢/🔴 +$盈亏 (+x.x%)*"
+- "*Subtotal: $amount · 🟢/🔴 +$pnl (+x.x%)*"
 - Choose 🟢/🔴/⚪ based on section PnL sign
 
 Header block before sections:
 - FX summary with as_of (from Rules.fx_overrides)
-- "MMF 总额: $X → 安全垫: $Y · 余额: $Z"
+- "MMF total: $X → Safety: $Y · Remainder: $Z"
 
 Overall summary at the end:
-- 总市值
-- 整体盈亏（包含百分比）
-- 扣除负债后净值（显示负债绝对额）
-- 资产类别占比：每类金额与占组合比例（x.x%）
+- Total market value
+- Overall PnL (including percentage)
+- Net value after liabilities (show the absolute liabilities amount)
+- Asset-class breakdown: amount per class and its share of the portfolio (x.x%)
 
 Additional rules:
 - HSBC 2028: value at-cost; no PnL

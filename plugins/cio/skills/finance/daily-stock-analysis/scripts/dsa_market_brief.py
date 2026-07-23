@@ -36,61 +36,61 @@ from _dsa_lib import (  # noqa: E402
 # Market definitions: indices + representative sector ETFs
 MARKETS = {
     "US": {
-        "name": "美股",
+        "name": "US equities",
         "indices": [
             ("^GSPC", "S&P 500"),
             ("^IXIC", "Nasdaq Composite"),
             ("^DJI", "Dow Jones"),
-            ("^VIX", "VIX 波动率"),
+            ("^VIX", "VIX volatility"),
         ],
         "sectors": [
-            ("XLK", "科技"),
-            ("XLF", "金融"),
-            ("XLV", "医疗"),
-            ("XLE", "能源"),
-            ("XLY", "消费可选"),
-            ("XLP", "消费必需"),
-            ("XLI", "工业"),
-            ("XLB", "材料"),
-            ("XLU", "公用事业"),
+            ("XLK", "Technology"),
+            ("XLF", "Financials"),
+            ("XLV", "Health Care"),
+            ("XLE", "Energy"),
+            ("XLY", "Consumer Discretionary"),
+            ("XLP", "Consumer Staples"),
+            ("XLI", "Industrials"),
+            ("XLB", "Materials"),
+            ("XLU", "Utilities"),
         ],
     },
     "HK": {
-        "name": "港股",
+        "name": "HK equities",
         "indices": [
-            ("^HSI", "恒生指数"),
-            ("^HSCE", "恒生中国企业"),
-            ("^HSTECH", "恒生科技"),
+            ("^HSI", "Hang Seng Index"),
+            ("^HSCE", "Hang Seng China Enterprises"),
+            ("^HSTECH", "Hang Seng Tech"),
         ],
         "sectors": [
-            ("0700.HK", "恒生科技 ETF"),
-            ("2828.HK", "恒生指数 ETF"),
-            ("2800.HK", "盈富基金"),
+            ("0700.HK", "Hang Seng Tech ETF"),
+            ("2828.HK", "Hang Seng Index ETF"),
+            ("2800.HK", "Tracker Fund of HK"),
         ],
     },
 }
 
 
-BRIEF_SYSTEM_PROMPT = """你是一位资深的市场策略分析师。根据用户提供的当日指数和板块数据，输出 DSA 风格的中文市场简报（Markdown 格式）。
+BRIEF_SYSTEM_PROMPT = """You are a seasoned market strategist. Based on the day's index and sector data the user provides, output a DSA-style English market brief (Markdown format).
 
-输出包含 4 个段落（用 Markdown 二级标题分隔）：
+The output contains 4 sections (separated by Markdown level-2 headings):
 
-## 一、指数概览
-逐个指数列出当日涨跌（格式：指数名 收盘价 (+x.xx%)），并给出整体方向判断（≤2 句）。
+## 1. Index Overview
+List each index's move for the day (format: index name, close (+x.xx%)), and give an overall direction call (<=2 sentences).
 
-## 二、板块轮动
-按当日涨跌幅排序，标出领涨 3 个、领跌 3 个板块；用 1 句话点评轮动信号（风险偏好/避险/科技回暖等）。
+## 2. Sector Rotation
+Sort by the day's move; flag the top 3 gainers and bottom 3 laggards; comment in 1 sentence on the rotation signal (risk-on / risk-off / tech rebound, etc.).
 
-## 三、关键观察
-3-5 条要点（量价关系、情绪指标如 VIX、突破/回撤、值得后续跟踪的标的）。每条 ≤30 字。
+## 3. Key Observations
+3-5 bullet points (price-volume relationship, sentiment gauges like VIX, breakouts/pullbacks, names worth tracking). Keep each short.
 
-## 四、行动建议
-2-3 条偏向操作的建议（注意：不是个股推荐，而是仓位/节奏建议，例如"减仓追高、轻仓试探突破板块"）。
+## 4. Action Ideas
+2-3 execution-oriented ideas (note: not single-stock recommendations, but position/pace guidance, e.g. "trim into strength, take a light probe on breakout sectors").
 
-铁律：
-- 完全基于提供的数据，不要编造任何"消息面/财报/政策"
-- 数字要具体，方向要明确
-- 不要前言、不要总结性末段，直接四个段落输出
+Hard rules:
+- Base everything strictly on the provided data; do not fabricate any "news / earnings / policy"
+- Numbers must be concrete, direction must be clear
+- No preamble and no concluding wrap-up paragraph — output the four sections directly
 """
 
 
@@ -131,26 +131,26 @@ def fetch_index_data(market_key: str) -> dict:
 
 def build_brief_prompt(market_data: dict) -> str:
     """Render compact market data into a user prompt for the LLM."""
-    lines = [f"日期：{date.today().isoformat()}", f"市场：{market_data['market']}", "", "【指数】"]
+    lines = [f"Date: {date.today().isoformat()}", f"Market: {market_data['market']}", "", "[Indices]"]
     for idx in market_data["indices"]:
         if "error" in idx:
-            lines.append(f"  {idx['label']} ({idx['ticker']}): 数据缺失")
+            lines.append(f"  {idx['label']} ({idx['ticker']}): data missing")
             continue
         lines.append(
             f"  {idx['label']} ({idx['ticker']}): {idx['last']} ({idx['pct_1d']:+.2f}%) "
-            f"MA20={idx['ma20']} MA50={idx['ma50']} RSI={idx['rsi14']} 距高 {idx['pct_from_52w_high']:+.1f}%"
+            f"MA20={idx['ma20']} MA50={idx['ma50']} RSI={idx['rsi14']} from high {idx['pct_from_52w_high']:+.1f}%"
         )
     lines.append("")
-    lines.append("【板块/ETF】")
+    lines.append("[Sectors/ETFs]")
     for sec in market_data["sectors"]:
         if "error" in sec:
-            lines.append(f"  {sec['label']} ({sec['ticker']}): 数据缺失")
+            lines.append(f"  {sec['label']} ({sec['ticker']}): data missing")
             continue
         vr = sec.get("vol_ratio")
         vr_str = f"vol={vr}x" if vr else ""
         lines.append(f"  {sec['label']} ({sec['ticker']}): {sec['last']} ({sec['pct_1d']:+.2f}%) {vr_str}")
     lines.append("")
-    lines.append("请按系统提示输出市场简报。")
+    lines.append("Output the market brief per the system prompt.")
     return "\n".join(lines)
 
 
@@ -185,7 +185,7 @@ def main() -> int:
         emit_report("FAILED: LLM returned empty response")
         return 1
 
-    title = f"📈 *{md['market']}市场简报* — {date.today().isoformat()}"
+    title = f"📈 *{md['market']} market brief* — {date.today().isoformat()}"
     full = f"{title}\n\n{body}\n\n_via {resp.model} · {elapsed:.1f}s_"
 
     # Full brief between markers — the Hermes agent delivers it on its reply channel

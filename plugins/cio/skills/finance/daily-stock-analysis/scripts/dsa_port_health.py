@@ -160,12 +160,12 @@ def main() -> int:
     # 2) Individual detail dashboards — only for negative signals (focus user attention)
     details: list[str] = []
     for r in results:
-        sig = (r.get("core_conclusion") or {}).get("signal", "观望")
+        sig = (r.get("core_conclusion") or {}).get("signal", "Watch")
         if signal_severity(sig) >= 0:
             continue  # neutral/bullish — skip detail to avoid spam
         details.append(format_dashboard(r))
 
-    print(f"[port-health] {len(details)} detail dashboards for bearish/警示", file=sys.stderr)
+    print(f"[port-health] {len(details)} detail dashboards for bearish/alerts", file=sys.stderr)
 
     status = (f"DONE: scanned {len(results)}/{len(holdings)} "
               f"(bearish_details={len(details)}, failures={len(failures)})")

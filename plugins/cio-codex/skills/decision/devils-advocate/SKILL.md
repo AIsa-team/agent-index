@@ -25,7 +25,7 @@ You MUST produce exactly the 3 sections below. No more, no fewer. No preamble. N
 
 ## THE 3-SECTION OUTPUT (mandatory format)
 
-### 1. **三个最强反对论据 (Strongest Counter-Arguments)**
+### 1. **Strongest Counter-Arguments**
 
 Three distinct reasons this plan/decision/thesis/angle could be wrong. Ranked by **likelihood of being right**, not by how comfortable they are to hear. Each one must be:
 - A specific concrete reason (not generic "this is risky")
@@ -41,7 +41,7 @@ Format:
 3. ...
 ```
 
-### 2. **数据 / 假设的 cherry-picking 风险 (Confirmation-Bias Audit)**
+### 2. **Confirmation-Bias Audit (data / assumption cherry-picking risk)**
 
 Identify where the user is **likely cherry-picking** — facts they're emphasizing because they support the conclusion they already want, while quietly down-weighting disconfirming evidence. Be specific:
 - Which numbers / sources / examples did they emphasize?
@@ -50,7 +50,7 @@ Identify where the user is **likely cherry-picking** — facts they're emphasizi
 
 If there isn't clear cherry-picking risk, say so plainly: "I don't see strong cherry-picking signal here." Don't manufacture criticism.
 
-### 3. **一年后的失败复盘 (1-Year Pre-Mortem)**
+### 3. **1-Year Pre-Mortem**
 
 Write a short paragraph dated **one year from today**, assuming this decision turned out wrong. The paragraph must:
 - State the concrete failure outcome (not "it didn't work" — say what specifically happened)
@@ -59,9 +59,9 @@ Write a short paragraph dated **one year from today**, assuming this decision tu
 
 Format:
 ```
-[YYYY-MM-DD]: 这个决定 / 计划失败了。具体表现：[concrete outcome]。
-根本原因：[single root cause]。
-最早的预警信号是 [specific observable signal] — 当时如果留意，能在 [time window] 内反转决定。
+[YYYY-MM-DD]: This decision / plan failed. What specifically happened: [concrete outcome].
+Root cause: [single root cause].
+The earliest warning signal was [specific observable signal] — if watched for, the decision could have been reversed within [time window].
 ```
 
 ---
@@ -75,7 +75,7 @@ Do NOT invoke devil's advocate when:
 - The user has explicitly said "I just want to ship, don't argue with me"
 - The user has already heard your devil's advocate output and is now asking follow-up questions on a specific point — those are normal conversation, not a second devil's advocate pass
 
-If unsure whether the user wants adversarial review or normal help, **ask** before invoking: "你想让我直接帮你执行，还是先 devil 一下？"
+If unsure whether the user wants adversarial review or normal help, **ask** before invoking: "Do you want me to just execute this, or pressure-test it first?"
 
 ---
 
@@ -97,7 +97,7 @@ The skill is the same across profiles, but emphasis differs:
 
 1. **No softening.** Do not start with praise. Do not end with reassurance.
 2. **No false balance.** If the plan is genuinely strong, say so in section 2 ("I don't see strong cherry-picking") — but don't manufacture weak objections to fill section 1.
-3. **No hallucinated data.** If you cite a number or a precedent, it must be real (or marked as "假设 / illustrative").
+3. **No hallucinated data.** If you cite a number or a precedent, it must be real (or marked as "assumption / illustrative").
 4. **Stay in scope.** Only adversarialize what the user submitted. Don't drag in unrelated decisions.
 5. **End at section 3.** No closing "but ultimately the choice is yours" — that defeats the point.
 6. After the 3 sections, you may add ONE clarifying question if there's genuinely ambiguous scope. Otherwise stop.
@@ -106,31 +106,31 @@ The skill is the same across profiles, but emphasis differs:
 
 ## OUTPUT EXAMPLE (illustrative — do NOT copy verbatim)
 
-User: `/devil 我准备加仓 NVDA 200 股，现价 $209，因为 AI 周期还没结束`
+User: `/devil I'm about to add 200 shares of NVDA at $209 because the AI cycle isn't over yet`
 
 Output:
 ```
-### 1. 三个最强反对论据
+### 1. Strongest Counter-Arguments
 
-1. **AI 资本开支拐点可能比你预期早**
-   → NVDA 收入 70%+ 来自 hyperscaler capex；近期 META、GOOGL 财报已显示 2026 H2 capex 增速可能从 +60% 降到 +20%。"周期还没结束"这个判断依据的是 trailing 12 月数据，但二阶导可能已经向下。
+1. **The AI capex inflection may come earlier than you expect**
+   → 70%+ of NVDA revenue comes from hyperscaler capex; recent META and GOOGL earnings already suggest 2026 H2 capex growth may slow from +60% to +20%. "The cycle isn't over" rests on trailing-12-month data, but the second derivative may already be turning down.
 
-2. **你的仓位 concentration 已经过重**
-   → NVDA 在你美股仓位里占比已是单一最大头寸（≈$170k cost / 828 股）。再加 200 股会让单股集中度突破 25%——这超过了你自己定的 10% single-name cap（来自 portfolio_rules.json）。理性的话，你应该减仓而不是加仓。
+2. **Your position concentration is already too heavy**
+   → NVDA is already the single largest position in your US book (≈$170k cost / 828 shares). Adding 200 more pushes single-name concentration past 25% — beyond your own 10% single-name cap (from portfolio_rules.json). Rationally you should be trimming, not adding.
 
-3. **$209 不是低位**
-   → 离 52 周高 $216 只差 3.4%，距 MA200 还高 14%。"加仓"在技术面通常等待回调到 MA50 或更低。此刻加仓是追涨，不是配置。
+3. **$209 is not a low**
+   → Only 3.4% off the 52-week high of $216, and still 14% above MA200. Technically, "adding" usually waits for a pullback to MA50 or lower. Adding here is chasing strength, not allocating.
 
-### 2. Cherry-picking 审计
+### 2. Confirmation-Bias Audit
 
-你强调的是"AI 周期还没结束"——这是真的，但你**没有提及**：
-- 你自己上次 `port health` 报告 NVDA 已经显示"减持 / 置信 80"（meta 已暴跌 -9%，semi 板块联动风险升高）
-- 你的 portfolio decisions weekly 上周提示了"hedge ratio < target"——意味着系统在告诉你 hedge 不够，不是加风险资产
-- 同样是 AI 主题的 AAPL 你最近没动 — 为什么独独看好 NVDA？
+You emphasize "the AI cycle isn't over" — which is true, but you **did not mention**:
+- Your own last `port health` already flagged NVDA as "Reduce / confidence 80" (Meta plunged -9%, semi-sector correlation risk rising)
+- Your portfolio decisions weekly flagged "hedge ratio < target" last week — the system is telling you your hedge is insufficient, not to add risk assets
+- You haven't touched AAPL, another AI-theme name, recently — why single out NVDA?
 
-强烈建议把"single name cap 10%"那条规则拿出来再看一遍。
+Strongly suggest re-reading that "single name cap 10%" rule.
 
-### 3. 一年后失败复盘
+### 3. 1-Year Pre-Mortem
 
-2027-05-20: 这次加仓亏损 -38%。NVDA 在 2026 Q4 财报 guidance 不及预期后从 $209 滑到 $130 区间，原因是 hyperscaler 2027 capex 增速从 +20% 进一步降到 +5%。根本原因：在估值高位 + 自己设定的 concentration 上限被突破 + 系统已经给出减持信号 时，仍然加仓。最早的预警信号是 META 2026 Q3 财报里 capex 增速首次下修——当时如果留意，能在 6 周内反转决定（甚至改成 AAPL 或 SOXX 分散仓位）。
+2027-05-20: This add lost -38%. After NVDA's 2026 Q4 guidance missed, it slid from $209 into the $130 range because hyperscaler 2027 capex growth slowed further from +20% to +5%. Root cause: adding at a valuation high + breaching your own concentration cap + ignoring a system Reduce signal, all at once. The earliest warning signal was the first capex-growth downgrade in META's 2026 Q3 earnings — if watched for, the decision could have been reversed within 6 weeks (or switched to AAPL or SOXX to diversify).
 ```

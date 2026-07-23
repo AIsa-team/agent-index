@@ -6,7 +6,7 @@ Provides:
   - Model routing (Gemini-2.5-flash primary → DeepSeek-v4-flash fallback)
   - OHLCV fetching via yfinance
   - Technical indicator computation (MA / RSI / MACD / volume)
-  - LLM call producing DSA-style "决策看板" output
+  - LLM call producing DSA-style "decision dashboard" output
   - Marker-bracketed report emission (__REPORT_START__/__REPORT_END__) for
     Hermes delivery over whatever channel the gateway is configured with
 
@@ -15,10 +15,10 @@ This file MUST be importable from sibling scripts via:
     from _dsa_lib import (...)
 
 Output format follows DSA's four-section dashboard structure:
-  1. core_conclusion   — 一句话总结 + 信号 + 仓位建议
-  2. data_perspective  — 趋势 / 价格位置 / 量能
-  3. intelligence      — 催化剂 / 风险
-  4. battle_plan       — 进场 / 出场 / 止损 / 清单
+  1. core_conclusion   — one-line takeaway + signal + position advice
+  2. data_perspective  — trend / price position / volume
+  3. intelligence      — catalysts / risks
+  4. battle_plan       — entry / exit / stop-loss / checklist
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ from typing import Any
 
 HERMES_HOME      = Path(os.environ.get("HERMES_HOME") or (Path.home() / ".hermes"))
 HERMES_ENV       = HERMES_HOME / ".env"
-# plugin 安装形态的约定 key 文件(引导流程写入,写完即生效不用重启宿主)
+# Conventional key file for the plugin install form (written by the onboarding flow; effective immediately, no host restart)
 AISA_CREDENTIALS = Path.home() / ".aisa" / "credentials"
 
 
@@ -499,61 +499,61 @@ def fetch_snapshot(ticker: str, *, period: str = "1y") -> TickerSnapshot | None:
 
 # ─── DSA-style decision dashboard prompt ───────────────────────────────────────
 
-DASHBOARD_SYSTEM_PROMPT = """你是一位资深的股票技术分析师。根据用户提供的技术面数据，按照"决策看板"四段式格式输出中文分析报告。
+DASHBOARD_SYSTEM_PROMPT = """You are a seasoned equity technical analyst. Based on the technical data the user provides, output an English analysis report in the four-part "decision dashboard" format.
 
-输出严格遵循以下 JSON 结构（只输出 JSON，不要代码块标记，不要任何额外文字）：
+Output strictly follows this JSON structure (output ONLY JSON, no code-block markers, no extra text):
 
 {
   "core_conclusion": {
-    "summary": "一句话总结（≤60 字，含明确观点）",
-    "signal": "买入｜增持｜持有｜减持｜卖出｜观望 之一",
-    "confidence": 0-100 的整数,
-    "position_advice": "建议仓位区间，例如 '0~30%' / '维持现有仓位' / '建议清仓'"
+    "summary": "one-sentence takeaway (<=60 chars, with a clear view)",
+    "signal": "one of: Buy | Add | Hold | Reduce | Sell | Watch",
+    "confidence": integer 0-100,
+    "position_advice": "suggested position range, e.g. '0-30%' / 'maintain current position' / 'exit recommended'"
   },
   "data_perspective": {
-    "trend": "上涨｜震荡｜下跌 + 一句话理由（基于 MA 排列、价格位置）",
-    "price_position": "相对 52 周高/低位置，相对 MA20/50/200 的描述",
-    "volume_analysis": "近期量能特征（放量/缩量/正常），结合价格走势给出含义"
+    "trend": "Up | Range-bound | Down + one-sentence reason (based on MA alignment, price position)",
+    "price_position": "position vs 52-week high/low, and vs MA20/50/200",
+    "volume_analysis": "recent volume character (heavy/light/normal), with its meaning given price action"
   },
   "intelligence": {
-    "positive_catalysts": ["短列表，2-3 条（基于技术面可推断的，例如突破阻力、量价配合等）"],
-    "risk_alerts": ["短列表，2-3 条（例如 RSI 超买、MACD 死叉、跌破支撑等）"]
+    "positive_catalysts": ["short list, 2-3 items (technically inferable, e.g. resistance breakout, price-volume confirmation)"],
+    "risk_alerts": ["short list, 2-3 items (e.g. RSI overbought, MACD dead cross, support break)"]
   },
   "battle_plan": {
-    "entry_targets": ["1-2 个具体价位，含触发条件"],
-    "exit_targets": ["1-2 个具体价位（盈利目标）"],
-    "stop_loss": "具体价位 + 触发条件",
-    "checklist": ["3-5 条执行前确认项"]
+    "entry_targets": ["1-2 concrete price levels with trigger conditions"],
+    "exit_targets": ["1-2 concrete price levels (profit targets)"],
+    "stop_loss": "concrete price level + trigger condition",
+    "checklist": ["3-5 pre-execution confirmation items"]
   }
 }
 
-铁律：
-1. 只输出 JSON，不要任何前言/解释/Markdown 代码块标记
-2. 所有价位都用具体数字（基于提供的最新收盘价推算），不要写"参考前期支撑"这种模糊词
-3. 信号与置信度要诚实：数据不足时输出"观望" + 低置信度
-4. 不要编造任何提供数据之外的"消息面"——intelligence 部分只能基于纯技术面推断
-5. **如果用户数据中提供了"盘前/盘后价"且偏离收盘价 ≥1%，必须把这一点写进 risk_alerts 或 positive_catalysts**——这通常预示隔夜消息面变化，在出 buy/sell 信号时**不能忽略**：
-   - 盘前/盘后大幅下跌（≥-2%）+ 你看到的技术面"健康" → 提示用户警惕隔夜利空，信号倾向"观望"或"减持"
-   - 盘前/盘后大幅上涨（≥+2%）+ 技术面平淡 → 提示用户已被市场抢跑，追涨需谨慎
+Hard rules:
+1. Output JSON only, no preamble/explanation/Markdown code-block markers
+2. All price levels use concrete numbers (derived from the provided latest close); avoid vague phrasing like "refer to prior support"
+3. Signal and confidence must be honest: when data is insufficient, output "Watch" + low confidence
+4. Do not fabricate any "news flow" beyond the provided data — the intelligence section may only draw on pure technicals
+5. **If the user data includes a "pre/post-market price" that diverges from the close by >=1%, you MUST note it in risk_alerts or positive_catalysts** — this often signals overnight news and MUST NOT be ignored when issuing a buy/sell signal:
+   - Large pre/post drop (<=-2%) + technicals you see look "healthy" → warn the user of overnight bad news, lean signal toward "Watch" or "Reduce"
+   - Large pre/post rise (>=+2%) + flat technicals → warn the user the market has front-run it; chasing needs caution
 """
 
 
-DASHBOARD_USER_TEMPLATE = """请分析以下股票的最新技术状态：
+DASHBOARD_USER_TEMPLATE = """Analyze the latest technical state of the following stock:
 
-【代码】{ticker}
-【名称】{name}
-【币种】{currency}
-【最新收盘】{last_close} ({pct_1d:+.2f}%) — 收盘日期 {last_close_date}
-{extended_block}【52 周区间】{low_52w} ~ {high_52w}（距高 {pct_from_high:+.1f}% / 距低 {pct_from_low:+.1f}%）
+[Ticker] {ticker}
+[Name] {name}
+[Currency] {currency}
+[Latest close] {last_close} ({pct_1d:+.2f}%) — close date {last_close_date}
+{extended_block}[52-week range] {low_52w} ~ {high_52w} (from high {pct_from_high:+.1f}% / from low {pct_from_low:+.1f}%)
 
-【均线】MA20={ma20} | MA50={ma50} | MA200={ma200}
-【动量】RSI14={rsi14} | MACD={macd} | Signal={macd_signal} | Hist={macd_hist}
-【量能】今日成交相对 20 日均量 = {volume_ratio_20d}x
+[Moving averages] MA20={ma20} | MA50={ma50} | MA200={ma200}
+[Momentum] RSI14={rsi14} | MACD={macd} | Signal={macd_signal} | Hist={macd_hist}
+[Volume] today's volume vs 20-day average = {volume_ratio_20d}x
 
-【近 10 日 K 线】
+[Last 10 daily candles]
 {recent_candles}
 
-请按系统提示的 JSON 结构输出决策看板。"""
+Output the decision dashboard in the JSON structure from the system prompt."""
 
 
 def build_user_prompt(snap: TickerSnapshot) -> str:
@@ -566,11 +566,11 @@ def build_user_prompt(snap: TickerSnapshot) -> str:
 
     # Extended-hours block — only present for US tickers in PRE/POST/CLOSED state
     if snap.extended_price is not None and snap.market_state in ("PRE", "POST", "CLOSED"):
-        state_zh = {"PRE": "盘前", "POST": "盘后", "CLOSED": "休市后"}.get(snap.market_state, snap.market_state)
+        state_en = {"PRE": "pre-market", "POST": "post-market", "CLOSED": "after-close"}.get(snap.market_state, snap.market_state)
         ts_short = (snap.extended_timestamp or "")[:16].replace("T", " ")
         extended_block = (
-            f"【⚠ {state_zh}最新价】{snap.extended_price} "
-            f"({snap.extended_pct_vs_close:+.2f}% vs 收盘) — {ts_short}\n"
+            f"[⚠ {state_en} latest price] {snap.extended_price} "
+            f"({snap.extended_pct_vs_close:+.2f}% vs close) — {ts_short}\n"
         )
     else:
         extended_block = ""
@@ -662,14 +662,14 @@ def call_llm_dashboard(snap: TickerSnapshot, *, profile: str = "fast_scan") -> d
 # ─── Markdown formatting (chat-friendly) ───────────────────────────────────────
 
 SIGNAL_EMOJI = {
-    "买入": "🟢🟢", "增持": "🟢", "持有": "⚪",
-    "观望": "⚪", "减持": "🔴", "卖出": "🔴🔴",
+    "Buy": "🟢🟢", "Add": "🟢", "Hold": "⚪",
+    "Watch": "⚪", "Reduce": "🔴", "Sell": "🔴🔴",
 }
 
 
 def signal_severity(signal: str) -> int:
     """Lower = more bearish, higher = more bullish. Used for sorting port-health."""
-    return {"卖出": -2, "减持": -1, "观望": 0, "持有": 0, "增持": 1, "买入": 2}.get(signal, 0)
+    return {"Sell": -2, "Reduce": -1, "Watch": 0, "Hold": 0, "Add": 1, "Buy": 2}.get(signal, 0)
 
 
 def format_dashboard(data: dict[str, Any]) -> str:
@@ -680,7 +680,7 @@ def format_dashboard(data: dict[str, Any]) -> str:
     intel = data.get("intelligence", {}) or {}
     bp = data.get("battle_plan", {}) or {}
 
-    sig = cc.get("signal", "观望")
+    sig = cc.get("signal", "Watch")
     emoji = SIGNAL_EMOJI.get(sig, "⚪")
     conf = cc.get("confidence", "—")
 
@@ -690,15 +690,15 @@ def format_dashboard(data: dict[str, Any]) -> str:
     last_close_date = meta.get("last_close_date")
     market_state = meta.get("market_state")
     # Label semantics:
-    #   - market_state=REGULAR        → 盘中实时 (intraday)
-    #   - market_state in PRE/POST    → 上一收盘价 (last close, before/after extended hours)
-    #   - market_state=CLOSED         → 当日收盘 (today's close, after-hours done)
+    #   - market_state=REGULAR        → intraday (live)
+    #   - market_state in PRE/POST    → last close (before/after extended hours)
+    #   - market_state=CLOSED         → today's close (after-hours done)
     #   - market_state=None           → non-US ticker / no extended data — just show date
     if last_close_date:
         if market_state == "REGULAR":
-            close_label = f" [{last_close_date} 盘中]"
+            close_label = f" [{last_close_date} intraday]"
         elif market_state in ("PRE", "POST", "CLOSED"):
-            close_label = f" [{last_close_date} 收盘]"
+            close_label = f" [{last_close_date} close]"
         else:
             close_label = f" [{last_close_date}]"
     else:
@@ -714,46 +714,46 @@ def format_dashboard(data: dict[str, Any]) -> str:
     ext_state = meta.get("market_state")
     if ext_price is not None and ext_state in ("PRE", "POST", "CLOSED"):
         ext_pct = meta.get("extended_pct_vs_close", 0.0) or 0.0
-        state_zh = {"PRE": "🌅 盘前", "POST": "🌆 盘后", "CLOSED": "🌙 休市"}.get(ext_state, ext_state)
+        state_en = {"PRE": "🌅 Pre-market", "POST": "🌆 Post-market", "CLOSED": "🌙 Closed"}.get(ext_state, ext_state)
         ts = (meta.get("extended_timestamp") or "")[:16].replace("T", " ")
         # Highlight large moves
         big_move = "‼️ " if abs(ext_pct) >= 2.0 else ""
-        lines.append(f"{state_zh} {big_move}{ext_price} ({ext_pct:+.2f}% vs 收盘) — {ts}")
+        lines.append(f"{state_en} {big_move}{ext_price} ({ext_pct:+.2f}% vs close) — {ts}")
 
     lines += [
         "",
-        f"{emoji} *{sig}* (置信 {conf})",
+        f"{emoji} *{sig}* (confidence {conf})",
         f"💡 {cc.get('summary','—')}",
-        f"📐 仓位建议：{cc.get('position_advice','—')}",
+        f"📐 Position advice: {cc.get('position_advice','—')}",
         "",
-        "*▎技术面*",
-        f"• 趋势：{dp.get('trend','—')}",
-        f"• 位置：{dp.get('price_position','—')}",
-        f"• 量能：{dp.get('volume_analysis','—')}",
+        "*▎Technicals*",
+        f"• Trend: {dp.get('trend','—')}",
+        f"• Position: {dp.get('price_position','—')}",
+        f"• Volume: {dp.get('volume_analysis','—')}",
     ]
 
     pos_cat = intel.get("positive_catalysts") or []
     risks = intel.get("risk_alerts") or []
     if pos_cat or risks:
         lines.append("")
-        lines.append("*▎情报*")
+        lines.append("*▎Intelligence*")
         for c in pos_cat:
             lines.append(f"✅ {c}")
         for r in risks:
             lines.append(f"⚠️ {r}")
 
     lines.append("")
-    lines.append("*▎作战计划*")
+    lines.append("*▎Battle plan*")
     for ent in (bp.get("entry_targets") or []):
-        lines.append(f"🎯 进场：{ent}")
+        lines.append(f"🎯 Entry: {ent}")
     for ext in (bp.get("exit_targets") or []):
-        lines.append(f"🏁 出场：{ext}")
+        lines.append(f"🏁 Exit: {ext}")
     sl = bp.get("stop_loss")
     if sl:
-        lines.append(f"🛑 止损：{sl}")
+        lines.append(f"🛑 Stop-loss: {sl}")
     chk = bp.get("checklist") or []
     if chk:
-        lines.append("📋 清单：")
+        lines.append("📋 Checklist:")
         for c in chk:
             lines.append(f"  • {c}")
 
@@ -767,18 +767,18 @@ def format_portfolio_summary(results: list[dict[str, Any]]) -> str:
     # Sort by severity ascending: bearish first
     sorted_r = sorted(
         results,
-        key=lambda r: (signal_severity(r.get("core_conclusion", {}).get("signal", "观望")),
+        key=lambda r: (signal_severity(r.get("core_conclusion", {}).get("signal", "Watch")),
                        -(r.get("core_conclusion", {}).get("confidence") or 0)),
     )
 
     lines = [f"🩺 *Portfolio Health Scan* — {date.today().isoformat()}", ""]
-    bear = []  # 卖出/减持
-    neut = []  # 观望/持有
-    bull = []  # 增持/买入
+    bear = []  # Sell/Reduce
+    neut = []  # Watch/Hold
+    bull = []  # Add/Buy
     for r in sorted_r:
         meta = r.get("_meta", {})
         cc = r.get("core_conclusion", {}) or {}
-        sig = cc.get("signal", "观望")
+        sig = cc.get("signal", "Watch")
         sev = signal_severity(sig)
         emoji = SIGNAL_EMOJI.get(sig, "⚪")
         pct = meta.get("pct_change_1d", 0.0)
@@ -791,18 +791,18 @@ def format_portfolio_summary(results: list[dict[str, Any]]) -> str:
             neut.append(line)
 
     if bear:
-        lines.append("*🔴 需要关注*")
+        lines.append("*🔴 Needs attention*")
         lines.extend(bear)
         lines.append("")
     if neut:
-        lines.append("*⚪ 中性*")
+        lines.append("*⚪ Neutral*")
         lines.extend(neut)
         lines.append("")
     if bull:
-        lines.append("*🟢 维持/增持*")
+        lines.append("*🟢 Maintain/Add*")
         lines.extend(bull)
         lines.append("")
-    lines.append(f"_共扫描 {len(results)} 只 — 详细分析查看后续消息_")
+    lines.append(f"_Scanned {len(results)} tickers — see following messages for detail_")
     return "\n".join(lines)
 
 

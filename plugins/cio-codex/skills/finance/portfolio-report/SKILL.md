@@ -6,7 +6,7 @@ description: "AUTO-INVOKE when user says 'port' (exactly). Runs the live portfol
 > **Data bootstrap** — this skill reads files under the user data directory.
 > If a path below does not exist yet, run `bash "${PLUGIN_ROOT}/scripts/ensure-data.sh"` first
 > (idempotent: seeds missing files from the plugin's bundled assets, never overwrites existing data).
-> - `~/.aisa/agents/cio/portfolio` — 组合数据目录（portfolio_truth.json / 引擎脚本）(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
+> - `~/.aisa/agents/cio/portfolio` — Portfolio data directory (portfolio_truth.json / engine scripts)(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
 
 ## MANDATORY ROUTING RULE
 **This is a hard rule with no exceptions.** When the user's message is exactly `port` (case-insensitive, may have leading/trailing spaces, no other words):
@@ -54,7 +54,7 @@ The authoritative set of holdings is whatever is defined in `~/.aisa/agents/cio/
 If the report is missing the `__DATA_SOURCE__:` line, OR it lists holdings that do not appear in `~/.aisa/agents/cio/portfolio/portfolio_truth.json`, treat the data as fabricated and reject it.
 
 If ANY check fails → reply ONLY with:
-`ERROR: 持仓报告执行失败（数据源校验未通过），请检查 portfolio_report.py 日志。`
+`ERROR: Portfolio report failed (data-source validation did not pass). Please check the portfolio_report.py logs.`
 Do NOT fabricate data. Do NOT retry. Do NOT summarise. Stop.
 
 If ALL checks pass → reply with the EXACT text between `__REPORT_START__` and `__REPORT_END__`, verbatim, character-for-character. No preamble, no summary, no closing remark.

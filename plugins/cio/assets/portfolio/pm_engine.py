@@ -214,60 +214,60 @@ def main():
     with open(json_path, 'w') as f:
         json.dump(decision, f, ensure_ascii=False, indent=2)
 
-    # detailed text (CN) per user's fixed format preference
+    # detailed text (EN) per user's fixed format preference
     def render_detailed(decision):
-        bucket_cn = {
-            'safety': '安全垫',
-            'cashflow': '现金流',
-            'growth': '成长',
-            'hedge': '对冲',
-            'tactical': '战术/流动性',
+        bucket_en = {
+            'safety': 'Safety buffer',
+            'cashflow': 'Cash flow',
+            'growth': 'Growth',
+            'hedge': 'Hedge',
+            'tactical': 'Tactical/Liquidity',
         }
-        status_cn = {'underweight': '低配', 'overweight': '超配', 'neutral': '中性'}
-        action_cn = {'add': '加仓', 'trim': '减仓', 'hold': '观望', 'exit': '清仓', 'watch': '观察'}
-        status_map = {'action_needed': '需要动作', 'watch': '观察', 'healthy': '健康'}
+        status_en = {'underweight': 'Underweight', 'overweight': 'Overweight', 'neutral': 'Neutral'}
+        action_en = {'add': 'Add', 'trim': 'Trim', 'hold': 'Hold', 'exit': 'Exit', 'watch': 'Watch'}
+        status_map = {'action_needed': 'Action needed', 'watch': 'Watch', 'healthy': 'Healthy'}
 
         ts = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(decision.get('timestamp', 0)))
         lines = []
-        lines.append(f"决策时间: {ts}")
-        lines.append(f"模式: {decision.get('mode','-')} · 政策版本: {decision.get('policy_version','-')}")
+        lines.append(f"Decision time: {ts}")
+        lines.append(f"Mode: {decision.get('mode','-')} · Policy version: {decision.get('policy_version','-')}")
         if decision.get('snapshot_id'):
-            lines.append(f"估值快照: {decision['snapshot_id']}")
+            lines.append(f"Valuation snapshot: {decision['snapshot_id']}")
         lines.append("")
-        lines.append(f"总体状态: {status_map.get(decision.get('overall_status'), decision.get('overall_status','-'))}")
+        lines.append(f"Overall status: {status_map.get(decision.get('overall_status'), decision.get('overall_status','-'))}")
         stance = decision.get('portfolio_stance') or []
         if stance:
-            lines.append(f"组合姿态: {', '.join(stance)}")
+            lines.append(f"Portfolio stance: {', '.join(stance)}")
         if decision.get('primary_issue'):
-            lines.append(f"主要问题: {decision['primary_issue']}")
+            lines.append(f"Primary issue: {decision['primary_issue']}")
         if decision.get('secondary_issue'):
-            lines.append(f"次要问题: {decision['secondary_issue']}")
-        lines.append(f"下一笔最优资本用途: {decision.get('next_best_use_of_capital','-')}")
-        lines.append(f"是否触发再平衡: {'是' if decision.get('rebalance_required') else '否'}")
+            lines.append(f"Secondary issue: {decision['secondary_issue']}")
+        lines.append(f"Next best use of capital: {decision.get('next_best_use_of_capital','-')}")
+        lines.append(f"Rebalance triggered: {'Yes' if decision.get('rebalance_required') else 'No'}")
         lines.append("")
-        lines.append("桶/类别诊断：")
+        lines.append("Bucket / category diagnosis:")
         for b in decision.get('buckets', []):
             name = b.get('bucket_name','-')
             pct = b.get('current_weight')
             pct_str = f"{pct*100:.1f}%" if isinstance(pct, (int, float)) else '-'
             band = b.get('target_band','-')
-            st = status_cn.get(b.get('status'), b.get('status','-'))
-            rec = action_cn.get(b.get('recommended_action'), b.get('recommended_action','-'))
+            st = status_en.get(b.get('status'), b.get('status','-'))
+            rec = action_en.get(b.get('recommended_action'), b.get('recommended_action','-'))
             rationale = b.get('rationale','-')
-            lines.append(f"- {bucket_cn.get(name,name)}: 当前 {pct_str} | 目标 {band} | 状态 {st} | 建议 {rec} | 理由 {rationale}")
+            lines.append(f"- {bucket_en.get(name,name)}: current {pct_str} | target {band} | status {st} | action {rec} | rationale {rationale}")
         lines.append("")
-        lines.append("具体标的与操作：")
+        lines.append("Specific securities & actions:")
         secs = decision.get('securities', [])
         if not secs:
-            lines.append("- （本期无具体标的操作建议）")
+            lines.append("- (no specific security actions this period)")
         else:
             for s in secs:
                 t = s.get('ticker') or s.get('name','-')
-                act = action_cn.get(s.get('action'), s.get('action','-'))
+                act = action_en.get(s.get('action'), s.get('action','-'))
                 amt = s.get('suggested_amount')
                 qty = s.get('suggested_quantity')
                 amt_str = (f"${amt:,.0f}" if isinstance(amt,(int,float)) else None) if amt else None
-                qty_str = (f"~{qty} 单位" if isinstance(qty,int) else None) if qty else None
+                qty_str = (f"~{qty} units" if isinstance(qty,int) else None) if qty else None
                 tail_parts = [p for p in [amt_str, qty_str] if p]
                 tail = ' · ' + ' · '.join(tail_parts) if tail_parts else ''
                 lines.append(f"- {t}: {act}{tail}")
@@ -275,18 +275,18 @@ def main():
                 cw_str = f"{cw*100:.2f}%" if isinstance(cw,(int,float)) else '-'
                 tw = s.get('target_weight_or_range','-')
                 band = s.get('buy_band') or s.get('trim_band') or '-'
-                lines.append(f"  当前权重 {cw_str} | 目标 {tw} | 区域 {band}")
+                lines.append(f"  current weight {cw_str} | target {tw} | zone {band}")
                 rationale = s.get('rationale','-')
                 risk = s.get('key_risk') or '-'
                 thesis = s.get('thesis_status') or '-'
                 nrd = s.get('next_review_date') or '-'
-                lines.append(f"  理由: {rationale}")
-                lines.append(f"  关键风险: {risk} | 论点: {thesis} | 下次回顾: {nrd}")
+                lines.append(f"  Rationale: {rationale}")
+                lines.append(f"  Key risk: {risk} | Thesis: {thesis} | Next review: {nrd}")
         lines.append("")
         if decision.get('reasoning'):
-            lines.append(f"方法说明: {decision['reasoning']}")
+            lines.append(f"Method note: {decision['reasoning']}")
         if decision.get('risks'):
-            lines.append(f"通用风险: {decision['risks']}")
+            lines.append(f"General risks: {decision['risks']}")
         return lines
 
     lines = render_detailed(decision)

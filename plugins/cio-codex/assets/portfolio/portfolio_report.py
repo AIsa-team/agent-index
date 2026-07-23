@@ -159,7 +159,7 @@ def generate_report():
     HKD_USD = live_fx.get('HKD_USD', HKD_USD)
     JPY_USD = live_fx.get('JPY_USD', JPY_USD)
     SGD_USD = live_fx.get('SGD_USD', SGD_USD)
-    fx_src  = '实时' if live_fx else '固定(fallback)'
+    fx_src  = 'live' if live_fx else 'fixed (fallback)'
 
     # JP Margin Loan from rules
     jp_margin_loan_usd = sum(
@@ -199,9 +199,9 @@ def generate_report():
         pct   = pnl / base * 100 if base else 0
         e     = pnl_emoji(pnl)
         lines.append(f"{e} *{label}* {name}")
-        lines.append(f"价格 {fmt_price(price, ccy)} · {chg:+.2f}%")
-        lines.append(f"持仓 {qty_str(qty)}股 · 成本 {fmt_price(cost, ccy)}")
-        lines.append(f"市值 *${mkt:,.0f}* · 盈亏 {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
+        lines.append(f"Price {fmt_price(price, ccy)} · {chg:+.2f}%")
+        lines.append(f"Qty {qty_str(qty)} sh · Cost {fmt_price(cost, ccy)}")
+        lines.append(f"Value *${mkt:,.0f}* · PnL {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
         section_totals.append((mkt, base))
 
     # ── US ────────────────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ def generate_report():
         if isin.startswith('CODE:'):   # structured note — static valuation
             val = qty
             lines.append("⚪ *Structured Note*")
-            lines.append(f"市值 *${val:,.0f}* · 盈亏 ⚪ ~$0 (~0%)\n")
+            lines.append(f"Value *${val:,.0f}* · PnL ⚪ ~$0 (~0%)\n")
             us_t.append((val, val))
             continue
 
@@ -230,12 +230,12 @@ def generate_report():
     us_val, us_cost = sum(v for v,_ in us_t), sum(c for _,c in us_t)
     us_pnl = us_val - us_cost
     e = pnl_emoji(us_pnl)
-    lines.append(f"*US小计: ${us_val:,.0f} · {e} {'+' if us_pnl>=0 else ''}${us_pnl:,.0f} ({(us_pnl/us_cost*100 if us_cost else 0):+.1f}%)*")
+    lines.append(f"*US subtotal: ${us_val:,.0f} · {e} {'+' if us_pnl>=0 else ''}${us_pnl:,.0f} ({(us_pnl/us_cost*100 if us_cost else 0):+.1f}%)*")
     grand_total_usd += us_val
 
     # ── HK ────────────────────────────────────────────────────────────────────
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("🇭🇰 *HK Equities* (收盘价)")
+    lines.append("🇭🇰 *HK Equities* (last close)")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     hk_t = []
     for pos in by_cat['hk']:
@@ -249,12 +249,12 @@ def generate_report():
     hk_val, hk_cost = sum(v for v,_ in hk_t), sum(c for _,c in hk_t)
     hk_pnl = hk_val - hk_cost
     e = pnl_emoji(hk_pnl)
-    lines.append(f"*HK小计: ${hk_val:,.0f} · {e} {'+' if hk_pnl>=0 else ''}${hk_pnl:,.0f} ({(hk_pnl/hk_cost*100 if hk_cost else 0):+.1f}%)*")
+    lines.append(f"*HK subtotal: ${hk_val:,.0f} · {e} {'+' if hk_pnl>=0 else ''}${hk_pnl:,.0f} ({(hk_pnl/hk_cost*100 if hk_cost else 0):+.1f}%)*")
     grand_total_usd += hk_val
 
     # ── JP Stocks + Fund ──────────────────────────────────────────────────────
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("🇯🇵 *日本股票* (收盘后)")
+    lines.append("🇯🇵 *Japan Equities* (after close)")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     jp_t = []
     for pos in by_cat['jp_equity']:
@@ -275,21 +275,21 @@ def generate_report():
         pnl   = mkt - base;  pct = pnl / base * 100 if base else 0
         e     = pnl_emoji(pnl)
         lines.append(f"{e} *{name}*")
-        lines.append(f"价格 JPY {price:,.0f}/份 · {chg:+.2f}%")
-        lines.append(f"持仓 {qty_str(qty)}份 · 成本 JPY {cost:,.0f}")
-        lines.append(f"市值 *${mkt:,.0f}* · 盈亏 {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
+        lines.append(f"Price JPY {price:,.0f}/unit · {chg:+.2f}%")
+        lines.append(f"Qty {qty_str(qty)} units · Cost JPY {cost:,.0f}")
+        lines.append(f"Value *${mkt:,.0f}* · PnL {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
         jp_t.append((mkt, base))
 
     jp_gross = sum(v for v,_ in jp_t);  jp_cost = sum(c for _,c in jp_t)
     jp_pnl   = jp_gross - jp_cost;      jp_net  = jp_gross - jp_margin_loan_usd
     e = pnl_emoji(jp_pnl)
-    lines.append(f"总市值 ${jp_gross:,.0f} · 保证金贷款 -${jp_margin_loan_usd:,.0f}")
-    lines.append(f"*日本净值: ${jp_net:,.0f} · {e} {'+' if jp_pnl>=0 else ''}${jp_pnl:,.0f} ({(jp_pnl/jp_cost*100 if jp_cost else 0):+.1f}%)*")
+    lines.append(f"Gross ${jp_gross:,.0f} · margin loan -${jp_margin_loan_usd:,.0f}")
+    lines.append(f"*Japan net: ${jp_net:,.0f} · {e} {'+' if jp_pnl>=0 else ''}${jp_pnl:,.0f} ({(jp_pnl/jp_cost*100 if jp_cost else 0):+.1f}%)*")
     grand_total_usd += jp_net
 
     # ── Fixed Income ──────────────────────────────────────────────────────────
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("🏦 *固定收益*")
+    lines.append("🏦 *Fixed Income*")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     fi_t = []
     for pos in by_cat['fixed_income']:
@@ -299,9 +299,9 @@ def generate_report():
         if not ticker:   # bond, no ticker — static at cost
             val = to_usd(cost * qty, ccy)
             lines.append(f"⚪ *{name}* `{isin}`")
-            lines.append("价格 静态估值 (OTC，无实时价)")
-            lines.append(f"持仓 {qty_str(qty)}份 · 成本 ${cost:.2f}")
-            lines.append(f"市值 *${val:,.0f}* · 盈亏 ⚪ ~$0 (~0%)\n")
+            lines.append("Price static valuation (OTC, no live price)")
+            lines.append(f"Qty {qty_str(qty)} units · Cost ${cost:.2f}")
+            lines.append(f"Value *${val:,.0f}* · PnL ⚪ ~$0 (~0%)\n")
             fi_t.append((val, val))
             continue
 
@@ -312,20 +312,20 @@ def generate_report():
         pnl   = mkt - base;  pct = pnl / base * 100 if base else 0
         e     = pnl_emoji(pnl)
         lines.append(f"{e} *{name}* `{isin}`")
-        lines.append(f"价格 {fmt_price(price, ccy)} · {chg:+.2f}%")
-        lines.append(f"持仓 {qty_str(qty)}份 · 成本 {fmt_price(cost, ccy)}")
-        lines.append(f"市值 *${mkt:,.0f}* · 盈亏 {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
+        lines.append(f"Price {fmt_price(price, ccy)} · {chg:+.2f}%")
+        lines.append(f"Qty {qty_str(qty)} units · Cost {fmt_price(cost, ccy)}")
+        lines.append(f"Value *${mkt:,.0f}* · PnL {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
         fi_t.append((mkt, base))
 
     fi_val, fi_cost = sum(v for v,_ in fi_t), sum(c for _,c in fi_t)
     fi_pnl = fi_val - fi_cost
     e = pnl_emoji(fi_pnl)
-    lines.append(f"*固收小计: ${fi_val:,.0f} · {e} {'+' if fi_pnl>=0 else ''}${fi_pnl:,.0f} ({(fi_pnl/fi_cost*100 if fi_cost else 0):+.1f}%)*")
+    lines.append(f"*Fixed Income subtotal: ${fi_val:,.0f} · {e} {'+' if fi_pnl>=0 else ''}${fi_pnl:,.0f} ({(fi_pnl/fi_cost*100 if fi_cost else 0):+.1f}%)*")
     grand_total_usd += fi_val
 
     # ── SG Funds ──────────────────────────────────────────────────────────────
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("🇸🇬 *新加坡基金*")
+    lines.append("🇸🇬 *Singapore Funds*")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     sg_t = []
     for pos in by_cat['sg_fund']:
@@ -338,15 +338,15 @@ def generate_report():
         pnl   = mkt - base;  pct = pnl / base * 100 if base else 0
         e     = pnl_emoji(pnl)
         lines.append(f"{e} *{name}* `{isin}`")
-        lines.append(f"价格 SGD {price:.4f} · {chg:+.2f}%")
-        lines.append(f"持仓 {qty_str(qty)}份 · 成本 SGD {cost:.4f}")
-        lines.append(f"市值 *${mkt:,.0f}* · 盈亏 {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
+        lines.append(f"Price SGD {price:.4f} · {chg:+.2f}%")
+        lines.append(f"Qty {qty_str(qty)} units · Cost SGD {cost:.4f}")
+        lines.append(f"Value *${mkt:,.0f}* · PnL {e} {'+' if pnl>=0 else ''}${pnl:,.0f} *({pct:+.1f}%)*\n")
         sg_t.append((mkt, base))
 
     sg_val, sg_cost = sum(v for v,_ in sg_t), sum(c for _,c in sg_t)
     sg_pnl = sg_val - sg_cost
     e = pnl_emoji(sg_pnl)
-    lines.append(f"*SG基金小计: ${sg_val:,.0f} · {e} {'+' if sg_pnl>=0 else ''}${sg_pnl:,.0f} ({(sg_pnl/sg_cost*100 if sg_cost else 0):+.1f}%)*")
+    lines.append(f"*SG Funds subtotal: ${sg_val:,.0f} · {e} {'+' if sg_pnl>=0 else ''}${sg_pnl:,.0f} ({(sg_pnl/sg_cost*100 if sg_cost else 0):+.1f}%)*")
     grand_total_usd += sg_val
 
     # ── Cash ──────────────────────────────────────────────────────────────────
@@ -368,51 +368,51 @@ def generate_report():
             cash_usd += sgd_val
 
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("💵 *现金*")
+    lines.append("💵 *Cash*")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     for label in ('Cash USD', 'MMF USD', 'MMF2', 'Cash SGD'):
         if label in cash_line:
             lines.append(f"{label} · *${cash_line[label]:,.0f}*")
-    lines.append(f"\n*现金小计: ~${cash_usd:,.0f}*")
+    lines.append(f"\n*Cash subtotal: ~${cash_usd:,.0f}*")
     grand_total_usd += cash_usd
 
     # ── Private ───────────────────────────────────────────────────────────────
     private_usd = 0.0
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("🏠 *私募 & 另类*")
+    lines.append("🏠 *Private & Alternatives*")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     for pos in by_cat['private']:
         name = pos['name'];  qty = float(pos['qty']);  ccy = pos['cost_ccy']
         val  = to_usd(qty, ccy)
         lines.append(f"{name} · *${val:,.0f}*")
         private_usd += val
-    lines.append(f"\n*私募小计: ~${private_usd:,.0f}*")
+    lines.append(f"\n*Private subtotal: ~${private_usd:,.0f}*")
     grand_total_usd += private_usd
 
     # ── Summary ───────────────────────────────────────────────────────────────
     lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-    lines.append("📊 *资产配置总览*")
+    lines.append("📊 *Asset Allocation Overview*")
     lines.append("━━━━━━━━━━━━━━━━━━━━\n")
     diff = grand_total_usd - BASELINE_USD
     e    = pnl_emoji(diff)
     alloc = [
-        ("🥇 黄金",      gold_total_usd),
-        ("🇺🇸 US股票",   us_val - gold_total_usd),
-        ("🇭🇰 HK股票",   hk_val),
-        ("🇯🇵 日本(净)", jp_net),
-        ("🏦 固收",       fi_val),
-        ("🇸🇬 SG基金",   sg_val),
-        ("💵 现金",       cash_usd),
-        ("🏠 私募",       private_usd),
+        ("🥇 Gold",          gold_total_usd),
+        ("🇺🇸 US Equities",   us_val - gold_total_usd),
+        ("🇭🇰 HK Equities",   hk_val),
+        ("🇯🇵 Japan (net)",   jp_net),
+        ("🏦 Fixed Income",   fi_val),
+        ("🇸🇬 SG Funds",      sg_val),
+        ("💵 Cash",           cash_usd),
+        ("🏠 Private",        private_usd),
     ]
     for label, val in alloc:
         pct = val / grand_total_usd * 100 if grand_total_usd else 0
         lines.append(f"{label}: ${val:,.0f} ({pct:.1f}%)")
     lines.append("────────────────────────")
-    lines.append(f"*总净值: ~${grand_total_usd:,.0f}*")
+    lines.append(f"*Total net worth: ~${grand_total_usd:,.0f}*")
     if BASELINE_USD > 0:
-        lines.append(f"基准: ${BASELINE_USD:,.0f}")
-        lines.append(f"*总变化: {e} {'+' if diff>=0 else ''}${diff:,.0f} ({diff/BASELINE_USD*100:+.1f}%)*")
+        lines.append(f"Baseline: ${BASELINE_USD:,.0f}")
+        lines.append(f"*Total change: {e} {'+' if diff>=0 else ''}${diff:,.0f} ({diff/BASELINE_USD*100:+.1f}%)*")
 
     return '\n'.join(lines)
 

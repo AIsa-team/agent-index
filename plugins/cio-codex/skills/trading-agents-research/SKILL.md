@@ -56,7 +56,7 @@ The output MUST start with exactly one of: `STARTED:`, `DONE:`, or `FAILED:`.
 - `STARTED:` → relay to user verbatim. Research is running in background; the report is retrievable later (see below). **No further action needed now.**
 - `DONE:` → the full report follows the status line — deliver it (see delivery rules below).
 - `FAILED:` → relay verbatim so user sees the error. **Do NOT retry automatically.**
-- Empty or none of the above → reply ONLY with: `ERROR: TradingAgents 启动失败（状态行校验未通过）。`
+- Empty or none of the above → reply ONLY with: `ERROR: TradingAgents failed to start (status-line validation did not pass).`
 
 ---
 

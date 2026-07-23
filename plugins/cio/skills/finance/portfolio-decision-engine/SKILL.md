@@ -54,8 +54,8 @@ Use this skill whenever you need to transform Portfolio Truth + Policy into acti
 - Layer 3 (Securities): top 3–5 items [{ticker, asset_type, current_weight, target_weight_or_range, action, priority, buy_band|trim_band zone, suggested_amount|quantity, rationale, key_risk, thesis_status, next_review_date}].
 
 # Rendering (chat message)
-- DEFAULT: Detailed Chinese natural-language brief enumerating JSON fields in this fixed order:
-  1) 决策时间; 2) 模式+政策版本; 3) 估值快照; 4) 总体状态; 5) 组合姿态; 6) 主要/次要问题; 7) 下一笔最优资本用途; 8) 是否触发再平衡; 9) 桶/类别诊断（当前%/目标带/状态/建议/理由）; 10) 具体标的与操作（操作、金额/数量、当前权重、目标范围/买卖区、理由、关键风险、论点、下次回顾）; 11) 方法说明; 12) 通用风险。
+- DEFAULT: Detailed English natural-language brief enumerating JSON fields in this fixed order (mirrors pm_engine.py render_detailed):
+  1) Decision time; 2) Mode + policy version; 3) Valuation snapshot; 4) Overall status; 5) Portfolio stance; 6) Primary/secondary issue; 7) Next best use of capital; 8) Rebalance triggered; 9) Bucket/category diagnosis (current % / target band / status / action / rationale); 10) Specific securities & actions (action, amount/quantity, current weight, target range/buy-sell zone, rationale, key risk, thesis, next review); 11) Method note; 12) General risks.
 - Do NOT emit the old concise summary unless the user explicitly requests it. Treat this format as locked unless the user asks to change it.
 - Keep separate from the 18:00 SGT valuation push (FORMAT LOCKED). Never alter the price-push format.
 

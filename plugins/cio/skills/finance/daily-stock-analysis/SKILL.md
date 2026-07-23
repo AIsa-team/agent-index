@@ -11,7 +11,7 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 > **Data bootstrap** — this skill reads files under the user data directory.
 > If a path below does not exist yet, run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-data.sh"` first
 > (idempotent: seeds missing files from the plugin's bundled assets, never overwrites existing data).
-> - `~/.aisa/agents/cio/portfolio` — 组合数据目录（portfolio_truth.json / 引擎脚本）(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
+> - `~/.aisa/agents/cio/portfolio` — Portfolio data directory (portfolio_truth.json / engine scripts)(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
 
 > **Required credentials** — scripts resolve these as: env var → `~/.aisa/credentials` (KEY=VALUE lines):
 > - `AISA_API_KEY` — AISA multi-model gateway — default LLM + aisa-* skills (search / marketpulse / prediction-markets / twitter). No key yet? Get one at https://console.aisa.one/get-started (takes about a minute).

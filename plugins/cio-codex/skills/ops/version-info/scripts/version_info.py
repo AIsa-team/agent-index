@@ -72,17 +72,17 @@ def semver_key(v: str):
 def fmt_age(epoch: float) -> str:
     age_s = int(time.time() - epoch)
     if age_s < 0:
-        return "未来时间?"
+        return "in the future?"
     if age_s < 3600:
-        return f"{age_s // 60} 分钟前"
+        return f"{age_s // 60} min ago"
     if age_s < 86400:
-        return f"{age_s // 3600} 小时前"
-    return f"{age_s // 86400} 天前"
+        return f"{age_s // 3600} h ago"
+    return f"{age_s // 86400} d ago"
 
 
 def fmt_ts(epoch: float) -> str:
     dt = datetime.fromtimestamp(epoch, tz=timezone.utc).astimezone()
-    return f"{dt.strftime('%Y-%m-%d %H:%M:%S %Z')}（{fmt_age(epoch)}）"
+    return f"{dt.strftime('%Y-%m-%d %H:%M:%S %Z')} ({fmt_age(epoch)})"
 
 
 def fmt_mtime(path: Path) -> str:
@@ -115,7 +115,7 @@ def main() -> int:
     lines = []
     ok = True
 
-    lines.append("=== CIO 版本与更新自检 ===")
+    lines.append("=== CIO version & update self-check ===")
     lines.append(f"profile dir: {pdir}")
     lines.append("")
 
@@ -130,16 +130,16 @@ def main() -> int:
     if active and active.get("version"):
         agent_id = active.get("agentId", agent_id)
         local_version = active["version"]
-        local_source = ".agentspec-content/active.json（内容更新器 active release）"
+        local_source = ".agentspec-content/active.json (content updater active release)"
         updated_at = active.get("updatedAt")
-        lines.append(f"[本地版本] {local_version}  ← {local_source}")
+        lines.append(f"[local version] {local_version}  ← {local_source}")
         lines.append(f"  release={active.get('release')}")
         if updated_at:
-            lines.append(f"  内容切换时间: {fmt_ts(updated_at)}")
+            lines.append(f"  content switch time: {fmt_ts(updated_at)}")
         rels = pdir / ".agentspec-content" / "releases"
         if rels.is_dir():
             names = sorted(p.name for p in rels.iterdir())
-            lines.append(f"  本地留存 releases: {', '.join(names[-4:])}")
+            lines.append(f"  locally retained releases: {', '.join(names[-4:])}")
 
     marker = read_json(pdir / ".agentspec.json")
     if marker:
@@ -147,8 +147,8 @@ def main() -> int:
         if local_version is None:
             agent_id = marker.get("id", agent_id)
             local_version = marker.get("version")
-            local_source = ".agentspec.json（安装 marker）"
-            lines.append(f"[本地版本] {local_version}  ← {local_source}")
+            local_source = ".agentspec.json (install marker)"
+            lines.append(f"[local version] {local_version}  ← {local_source}")
         lines.append(f"  marker: version={marker.get('version')}  target={marker.get('target')}  pinned={pinned}")
 
     if local_version is None:
@@ -157,11 +157,11 @@ def main() -> int:
             if fb and fb.get("version"):
                 agent_id = fb.get("agent") or fb.get("id") or agent_id
                 local_version = fb["version"]
-                local_source = f"{fb_name}（fallback）"
-                lines.append(f"[本地版本] {local_version}  ← {local_source}")
+                local_source = f"{fb_name} (fallback)"
+                lines.append(f"[local version] {local_version}  ← {local_source}")
                 break
     if local_version is None:
-        lines.append("[本地版本] ⚠️ 未找到任何版本信息 —— dev 环境（非安装器安装）或安装未完成。")
+        lines.append("[local version] ⚠️ no version info found — dev environment (not installer-installed) or install incomplete.")
     lines.append("")
 
     # --- 2. index latest ---
@@ -170,24 +170,24 @@ def main() -> int:
     if index:
         entry = (index.get("agents") or {}).get(agent_id) or {}
         latest = entry.get("latest")
-        lines.append(f"[中心索引] latest = {latest or '（索引中无 ' + agent_id + '）'}")
+        lines.append(f"[central index] latest = {latest or '(' + agent_id + ' not in index)'}")
     else:
         ok = False
-        lines.append(f"[中心索引] 拉取失败: {index_err}")
-        lines.append("  ⚠️ 无法判断是否落后于 latest。")
+        lines.append(f"[central index] fetch failed: {index_err}")
+        lines.append("  ⚠️ cannot determine whether behind latest.")
     lines.append("")
 
     # --- 3. update loop health ---
     log_path = find_update_log(pdir)
     loop_recent = False
     last_status = None
-    lines.append("[更新循环健康度]")
+    lines.append("[update loop health]")
     if log_path:
         try:
             mtime = log_path.stat().st_mtime
             loop_recent = (time.time() - mtime) < LOOP_STALE_S
             tail = log_path.read_text(errors="ignore").strip().splitlines()[-LOG_TAIL_LINES:]
-            lines.append(f"  日志: {log_path}  最后活动: {fmt_ts(mtime)}")
+            lines.append(f"  log: {log_path}  last activity: {fmt_ts(mtime)}")
             for ln in tail:
                 try:
                     j = json.loads(ln)
@@ -196,38 +196,38 @@ def main() -> int:
                 except (json.JSONDecodeError, AttributeError):
                     lines.append(f"    {ln[-120:]}")
             if not loop_recent:
-                lines.append(f"  ⚠️ 循环已 {fmt_age(mtime)} 无输出（正常应 ≤ 更新间隔，默认 300s）")
+                lines.append(f"  ⚠️ loop has had no output for {fmt_age(mtime)} (normally should be <= update interval, default 300s)")
         except OSError as e:
-            lines.append(f"  日志读取失败: {e}")
+            lines.append(f"  log read failed: {e}")
     else:
-        lines.append("  未找到 content-update.log —— 本环境可能不运行内容更新循环（如本地 dev / CLI 安装）。")
+        lines.append("  content-update.log not found — this environment may not run the content-update loop (e.g. local dev / CLI install).")
     lines.append("")
 
     # --- 4. verdict ---
-    lines.append("[结论]")
+    lines.append("[verdict]")
     lk, rk = semver_key(local_version or ""), semver_key(latest or "")
     if lk and rk:
         if lk == rk:
-            lines.append(f"  ✅ 本地 {local_version} == 索引 latest {latest}，已是最新。")
+            lines.append(f"  ✅ local {local_version} == index latest {latest} — up to date.")
         elif lk < rk:
             if pinned:
-                lines.append(f"  📌 本地 {local_version} < latest {latest}，但 pinned=true —— 显式钉住版本，不更新是契约行为，不是故障。")
+                lines.append(f"  📌 local {local_version} < latest {latest}, but pinned=true — explicitly pinned; not updating is contractual, not a fault.")
             elif loop_recent:
-                lines.append(f"  ⏳ 本地 {local_version} < latest {latest}，但更新循环活跃 —— 大概率是索引 CDN 缓存延迟（发布后 5–30 分钟属正常），稍后重查。")
-                lines.append(f"     若超过 {CDN_GRACE_S // 60} 分钟仍未收敛，再查 content-update.log 中的下载/SHA 报错。")
+                lines.append(f"  ⏳ local {local_version} < latest {latest}, but the update loop is active — most likely index CDN cache lag (5-30 min after publish is normal); recheck shortly.")
+                lines.append(f"     If it hasn't converged after {CDN_GRACE_S // 60} min, check content-update.log for download/SHA errors.")
             else:
-                lines.append(f"  ⚠️ 本地 {local_version} < latest {latest}，且更新循环无近期活动 —— 更新器可能未运行或已卡死，检查 sandbox entrypoint 与 content-update.log。")
+                lines.append(f"  ⚠️ local {local_version} < latest {latest}, and the update loop has no recent activity — the updater may not be running or is stuck; check the sandbox entrypoint and content-update.log.")
         else:
-            lines.append(f"  ℹ️ 本地 {local_version} > latest {latest} —— 本地领先于索引（dev 版本或索引未发布）。")
+            lines.append(f"  ℹ️ local {local_version} > latest {latest} — local is ahead of the index (dev version or index not yet published).")
     else:
-        lines.append("  ⚠️ 版本比较不可用（本地或索引版本缺失）。")
+        lines.append("  ⚠️ version comparison unavailable (local or index version missing).")
     lines.append("")
 
     # --- 5. session caveat ---
-    lines.append("[重要提示]")
-    lines.append("  内容更新不重启运行时：已有会话继续使用创建时的 system prompt，")
-    lines.append("  新版 SOUL/skills 从下一个会话生效。磁盘已是新版 ≠ 当前会话是新版。")
-    lines.append("  验证新版行为请开新会话。")
+    lines.append("[important note]")
+    lines.append("  Content updates do not restart the runtime: existing sessions keep the system prompt")
+    lines.append("  they were created with; new SOUL/skills take effect from the next session. New on disk != new in the current session.")
+    lines.append("  Open a new session to verify new-version behavior.")
 
     print("__REPORT_START__")
     print("\n".join(lines))

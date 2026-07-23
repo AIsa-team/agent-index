@@ -461,7 +461,7 @@ def call_trading_agents_api(ticker: str) -> dict:
 
 def _s(ta: dict, field: str) -> str:
     v = ta.get(field, "")
-    return str(v).strip() if v else "(无数据)"
+    return str(v).strip() if v else "(no data)"
 
 
 def format_report_sections(result: dict) -> list:

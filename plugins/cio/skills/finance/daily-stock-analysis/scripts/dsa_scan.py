@@ -11,7 +11,7 @@ Behavior:
   1. Fetch OHLCV via yfinance for each ticker
   2. Compute technicals (MA / RSI / MACD / volume)
   3. Call Gemini-2.5-flash (no thinking) → DeepSeek-v4-flash fallback
-  4. Render DSA-style "决策看板" markdown for each ticker
+  4. Render DSA-style "decision dashboard" markdown for each ticker
   5. Emit all dashboards + a summary status line between
      __REPORT_START__ / __REPORT_END__ markers on stdout — the Hermes agent
      reads them and delivers over its own reply channel
