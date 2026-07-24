@@ -1,0 +1,10 @@
+{
+  "AAPL": {"isin": null, "source": "demo", "name": "Apple Inc", "cost_ccy": "USD"},
+  "MSFT": {"isin": null, "source": "demo", "name": "Microsoft Corp", "cost_ccy": "USD"},
+  "NVDA": {"isin": null, "source": "demo", "name": "NVIDIA Corp", "cost_ccy": "USD"},
+  "IAU": {"isin": null, "source": "demo", "name": "iShares Gold Trust", "cost_ccy": "USD"},
+  "0700.HK": {"isin": null, "source": "demo", "name": "Tencent Holdings", "cost_ccy": "HKD"},
+  "9988.HK": {"isin": null, "source": "demo", "name": "Alibaba Group", "cost_ccy": "HKD"},
+  "7203.T": {"isin": null, "source": "demo", "name": "Toyota Motor Corp", "cost_ccy": "JPY"},
+  "6758.T": {"isin": null, "source": "demo", "name": "Sony Group Corp", "cost_ccy": "JPY"}
+}

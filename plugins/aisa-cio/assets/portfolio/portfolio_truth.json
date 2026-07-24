@@ -1,0 +1,183 @@
+[
+  {
+    "isin": null,
+    "name": "Apple Inc",
+    "yahoo_ticker": "AAPL",
+    "qty": 200,
+    "cost_per_unit": 180.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "preferred_symbol": "AAPL"
+    }
+  },
+  {
+    "isin": null,
+    "name": "Microsoft Corp",
+    "yahoo_ticker": "MSFT",
+    "qty": 100,
+    "cost_per_unit": 380.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "preferred_symbol": "MSFT"
+    }
+  },
+  {
+    "isin": null,
+    "name": "NVIDIA Corp",
+    "yahoo_ticker": "NVDA",
+    "qty": 150,
+    "cost_per_unit": 95.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "preferred_symbol": "NVDA"
+    }
+  },
+  {
+    "isin": null,
+    "name": "iShares Gold Trust",
+    "yahoo_ticker": "IAU",
+    "qty": 1000,
+    "cost_per_unit": 50.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "preferred_symbol": "IAU"
+    }
+  },
+  {
+    "isin": null,
+    "name": "Tencent Holdings",
+    "yahoo_ticker": "0700.HK",
+    "qty": 800,
+    "cost_per_unit": 380.0,
+    "cost_ccy": "HKD",
+    "meta": {
+      "preferred_symbol": "0700.HK"
+    }
+  },
+  {
+    "isin": null,
+    "name": "Alibaba Group",
+    "yahoo_ticker": "9988.HK",
+    "qty": 1000,
+    "cost_per_unit": 95.0,
+    "cost_ccy": "HKD",
+    "meta": {
+      "preferred_symbol": "9988.HK"
+    }
+  },
+  {
+    "isin": null,
+    "name": "Toyota Motor Corp",
+    "yahoo_ticker": "7203.T",
+    "qty": 300,
+    "cost_per_unit": 2800.0,
+    "cost_ccy": "JPY",
+    "meta": {
+      "preferred_symbol": "7203.T"
+    }
+  },
+  {
+    "isin": null,
+    "name": "Sony Group Corp",
+    "yahoo_ticker": "6758.T",
+    "qty": 200,
+    "cost_per_unit": 3000.0,
+    "cost_ccy": "JPY",
+    "meta": {
+      "preferred_symbol": "6758.T"
+    }
+  },
+  {
+    "isin": "DEMO00BOND0001",
+    "name": "Demo Bond 2028",
+    "yahoo_ticker": null,
+    "qty": 50,
+    "cost_per_unit": 1000.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "tags": [
+        "bond"
+      ]
+    }
+  },
+  {
+    "isin": "CODE:CASH-USD",
+    "name": "Cash USD",
+    "yahoo_ticker": null,
+    "qty": 80000,
+    "cost_per_unit": 1.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "tags": [
+        "cash"
+      ]
+    }
+  },
+  {
+    "isin": "CODE:MMF-USD",
+    "name": "MMF USD",
+    "yahoo_ticker": null,
+    "qty": 120000,
+    "cost_per_unit": 1.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "tags": [
+        "mmf"
+      ]
+    }
+  },
+  {
+    "isin": "CODE:MMF2",
+    "name": "MMF2",
+    "yahoo_ticker": null,
+    "qty": 30000,
+    "cost_per_unit": 1.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "tags": [
+        "mmf"
+      ]
+    }
+  },
+  {
+    "isin": "CODE:CASH-SGD",
+    "name": "Cash SGD",
+    "yahoo_ticker": null,
+    "qty": 50000,
+    "cost_per_unit": 1.0,
+    "cost_ccy": "SGD",
+    "meta": {
+      "tags": [
+        "cash"
+      ]
+    }
+  },
+  {
+    "isin": "CODE:PRIVATEFUND",
+    "name": "PrivateFund",
+    "yahoo_ticker": null,
+    "qty": 100000,
+    "cost_per_unit": 1.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "tags": [
+        "private",
+        "safety"
+      ]
+    }
+  },
+  {
+    "isin": "CODE:STRUCTNOTE",
+    "name": "StructNote",
+    "yahoo_ticker": null,
+    "qty": 50000,
+    "cost_per_unit": 50000.0,
+    "cost_ccy": "USD",
+    "meta": {
+      "tags": [
+        "structured-note",
+        "static"
+      ]
+    }
+  }
+]

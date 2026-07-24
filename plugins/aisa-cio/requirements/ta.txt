@@ -1,0 +1,8 @@
+# TradingAgents (TauricResearch) — OPTIONAL heavy dependency powering `ta TICKER`
+# deep research. Installed as a pip git dependency (upstream ships pyproject.toml
+# but has no official PyPI release; the PyPI name `tradingagents` is a third-party
+# fork — do NOT use it).
+#
+# Pinned to a commit SHA for reproducible builds (2026-07-05 upstream main).
+# Bump deliberately: update the SHA, re-test `ta TICKER`, republish.
+tradingagents @ git+https://github.com/TauricResearch/TradingAgents@01477f9afb7a47b849ed4c9259d3a9a4738d9fda

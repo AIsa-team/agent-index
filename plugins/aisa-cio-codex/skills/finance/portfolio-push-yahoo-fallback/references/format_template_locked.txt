@@ -1,0 +1,55 @@
+PORTFOLIO PUSH FORMAT — LOCKED (English labels; effective 2026-07-22, supersedes 2026-04-14)
+
+This format is the default for all portfolio pushes (scheduled and /888) until the user explicitly asks to change it. Do not deviate.
+
+Per section (in this order):
+1) 🇺🇸 US Equities & ETFs (USD)
+2) 🇭🇰 HK Equities (HKD)
+3) 🇯🇵 Japan Equities (JPY)
+4) 🇯🇵 Japan Funds (JPY)
+5) 🏦 Fixed Income
+6) 🇸🇬 Singapore Funds (SGD)
+7) 💵 Cash & Private
+
+Section framing:
+- Precede and follow the section title with a separator line: "━━━━━━━━━━━━━━━━━━━━" (U+2501 repeated)
+- Section title line uses the emoji names above.
+
+Per holding (FOUR LINES):
+- Line 1: colored dot and Name
+  • 🟢 for gain, 🔴 for loss, ⚪ for flat
+  • Use the instrument Name (friendly), not the ticker, unless needed for lot disambiguation
+  • StructNote: show under US, no brackets, treat as a normal position
+- Line 2: price line
+  • "Price {CCY} {price:0.0000}"
+  • If day change is not reliably available, append "· +0.00%"
+- Line 3: position & unit cost line
+  • "Qty {quantity} · Cost {CCY} {unit_cost:0.0000}"
+  • Quantity prints without trailing .00 when integer
+- Line 4: market value & PnL line
+  • "Value ${value_int} · PnL {dot} ${pnl_int} ({+/-x.x%})"
+  • Value and PnL are integer dollars with thousand separators; PnL% rounds to 0.1%
+  • Use 🟢/🔴/⚪ dot again to reflect PnL sign
+
+Section subtotal (single line at the end of each section):
+- "*Subtotal: $amount · 🟢/🔴 +$pnl (+x.x%)*"
+- Choose 🟢/🔴/⚪ based on section PnL sign
+
+Header block before sections:
+- FX summary with as_of (from Rules.fx_overrides)
+- "MMF total: $X → Safety: $Y · Remainder: $Z"
+
+Overall summary at the end:
+- Total market value
+- Overall PnL (including percentage)
+- Net value after liabilities (show the absolute liabilities amount)
+- Asset-class breakdown: amount per class and its share of the portfolio (x.x%)
+
+Additional rules:
+- HSBC 2028: value at-cost; no PnL
+- Cash/MMF/Private: static price=1; show as ⚪
+- 0700.HK lots show separately (append (A)/(B) via name label)
+- Do not show data-source tags (v7/v8/spark) in the output
+- No markdown rendering assumptions — asterisks are literal characters
+
+This template supersedes any other formatting guidance in this skill. Only change if the user explicitly requests it. END.

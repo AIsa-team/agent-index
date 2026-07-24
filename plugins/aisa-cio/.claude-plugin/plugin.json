@@ -1,0 +1,18 @@
+{
+  "name": "aisa-cio",
+  "version": "1.3.7",
+  "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Responds in English.",
+  "author": {
+    "name": "AIsa",
+    "url": "https://console.aisa.one/financial-agent"
+  },
+  "keywords": [
+    "investing",
+    "portfolio",
+    "stocks",
+    "etf",
+    "research",
+    "cio",
+    "finance"
+  ]
+}
