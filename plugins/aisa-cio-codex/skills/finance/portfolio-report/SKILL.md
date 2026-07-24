@@ -1,6 +1,6 @@
 ---
 name: portfolio-report
-description: "AUTO-INVOKE when user says 'port' (exactly). Runs the live portfolio report script and returns output verbatim."
+description: "AUTO-INVOKE when user says 'portfolio' (exactly). Runs the live portfolio report script and returns output verbatim."
 ---
 
 > **Data bootstrap** — this skill reads files under the user data directory.
@@ -9,7 +9,7 @@ description: "AUTO-INVOKE when user says 'port' (exactly). Runs the live portfol
 > - `~/.aisa/agents/aisa-cio/portfolio` — Portfolio data directory (portfolio_truth.json / engine scripts)(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
 
 ## MANDATORY ROUTING RULE
-**This is a hard rule with no exceptions.** When the user's message is exactly `port` (case-insensitive, may have leading/trailing spaces, no other words):
+**This is a hard rule with no exceptions.** When the user's message is exactly `portfolio` (case-insensitive, may have leading/trailing spaces, no other words):
 
 1. **You MUST invoke this skill immediately** using the skills tool (`skill_view` then execute it). Do NOT describe the portfolio from memory. Do NOT use `delegate_task`. The skill runs the live portfolio script with real-time prices.
 
@@ -60,6 +60,6 @@ Do NOT fabricate data. Do NOT retry. Do NOT summarise. Stop.
 If ALL checks pass → reply with the EXACT text between `__REPORT_START__` and `__REPORT_END__`, verbatim, character-for-character. No preamble, no summary, no closing remark.
 
 #### Rules:
-- Run the script **exactly ONCE** per `port` request.
+- Run the script **exactly ONCE** per `portfolio` request.
 - Your only jobs are: (a) call the tool correctly, (b) validate the output, (c) relay or error.
 - You are FORBIDDEN from composing portfolio content from memory, training data, or prior conversation — 100% of the numbers and tickers must come from the tool output between the markers.

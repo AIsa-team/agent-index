@@ -1,6 +1,6 @@
 ---
 name: portfolio-update
-description: "AUTO-INVOKE when user reports a portfolio change in natural language (我买了/卖了/加仓/减仓/清仓/新开仓/现金或MMF更新到/改成本价, bought/sold/trimmed/exited), or says 'port update'. Guides holdings updates via update_holdings.py — never hand-edit portfolio_truth.json."
+description: "AUTO-INVOKE when user reports a portfolio change in natural language (我买了/卖了/加仓/减仓/清仓/新开仓/现金或MMF更新到/改成本价, bought/sold/trimmed/exited), or says 'portfolio update'. Guides holdings updates via update_holdings.py — never hand-edit portfolio_truth.json."
 ---
 
 > **Data bootstrap** — this skill reads files under the user data directory.
@@ -35,15 +35,15 @@ Translate the user's natural-language holdings change into `update_holdings.py` 
    "NVDA buy 100 sh @ USD 202.50 → position 100→200 sh, weighted-average cost ≈ 151.25. Execute?"
    **Never run any write command before the user explicitly agrees.**
 4. **Execute** — run the corresponding command once, and forward the script output (including before/after and the `📸 snapshot:` line) to the user **verbatim**. The output must contain `✅` and `snapshot:`; if either is missing → treat it as a failure, show the raw error, do not retry, do not fabricate a result.
-5. **Verify** — tell the user they can run `port` to see the updated live valuation. If execution failed or the user wants to undo: the latest snapshot is in `~/.aisa/agents/aisa-cio/portfolio/snapshots/`; rollback = copy the snapshot back to `portfolio_truth.json` (run `cp` only after user confirmation).
+5. **Verify** — tell the user they can run `portfolio` to see the updated live valuation. If execution failed or the user wants to undo: the latest snapshot is in `~/.aisa/agents/aisa-cio/portfolio/snapshots/`; rollback = copy the snapshot back to `portfolio_truth.json` (run `cp` only after user confirmation).
 
-## `port update` guidance mode
+## `portfolio update` guidance mode
 
-When the user types `port update`: first run `list` to show current holdings, then ask "Which one do you want to change? (add / trim / new / exit / change cost / change cash)", and enter the same workflow above.
+When the user types `portfolio update`: first run `list` to show current holdings, then ask "Which one do you want to change? (add / trim / new / exit / change cost / change cash)", and enter the same workflow above.
 
 ## Hard rules
 
 - **Never hand-edit `portfolio_truth.json`** — all writes go through `update_holdings.py`.
 - Quantities/prices/amounts must come from the user's own words or the user's confirmation — **never guess or auto-fill**.
 - One conversation may handle multiple changes, but **confirm and execute one at a time**.
-- After all changes are done, suggest the user run `port` to verify.
+- After all changes are done, suggest the user run `portfolio` to verify.

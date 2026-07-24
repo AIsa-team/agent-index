@@ -124,7 +124,7 @@ Output:
 ### 2. Confirmation-Bias Audit
 
 You emphasize "the AI cycle isn't over" — which is true, but you **did not mention**:
-- Your own last `port health` already flagged NVDA as "Reduce / confidence 80" (Meta plunged -9%, semi-sector correlation risk rising)
+- Your own last `portfolio health` already flagged NVDA as "Reduce / confidence 80" (Meta plunged -9%, semi-sector correlation risk rising)
 - Your portfolio decisions weekly flagged "hedge ratio < target" last week — the system is telling you your hedge is insufficient, not to add risk assets
 - You haven't touched AAPL, another AI-theme name, recently — why single out NVDA?
 

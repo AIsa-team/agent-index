@@ -20,6 +20,7 @@ Output format follows DSA's four-section dashboard structure:
   3. intelligence      — catalysts / risks
   4. battle_plan       — entry / exit / stop-loss / checklist
 """
+
 from __future__ import annotations
 
 import json
@@ -32,8 +33,8 @@ from typing import Any
 
 # ─── Paths and config loading ──────────────────────────────────────────────────
 
-HERMES_HOME      = Path(os.environ.get("HERMES_HOME") or (Path.home() / ".hermes"))
-HERMES_ENV       = HERMES_HOME / ".env"
+HERMES_HOME = Path(os.environ.get("HERMES_HOME") or (Path.home() / ".hermes"))
+HERMES_ENV = HERMES_HOME / ".env"
 # Conventional key file for the plugin install form (written by the onboarding flow; effective immediately, no host restart)
 AISA_CREDENTIALS = Path.home() / ".aisa" / "credentials"
 
@@ -75,7 +76,7 @@ def get_router(profile: str = "fast_scan"):
         Fallback : deepseek-v4-pro   (in-family fallback; if flash hiccups,
                    the heavier model takes over without changing API or quota)
 
-    T1 (single scan) and T2 (port health) use this chain. Speed matters
+    T1 (single scan) and T2 (portfolio health) use this chain. Speed matters
     because T2 fires 16 sequential calls; v4-flash brings T2 from 18 min
     down to ~5 min with negligible quality loss for technical analysis.
 
@@ -90,12 +91,15 @@ def get_router(profile: str = "fast_scan"):
         return _router_cache[profile]
 
     import litellm
+
     load_env()
 
     aisa_key = os.environ.get("AISA_API_KEY", "")
     if not aisa_key:
-        print("[router] WARNING: no AISA_API_KEY found; both primary and fallback will fail",
-              file=sys.stderr)
+        print(
+            "[router] WARNING: no AISA_API_KEY found; both primary and fallback will fail",
+            file=sys.stderr,
+        )
 
     # Both models are served through the AISA multi-model gateway
     # (OpenAI-compatible), so LiteLLM uses the openai/ prefix with a
@@ -154,9 +158,11 @@ def get_router(profile: str = "fast_scan"):
 
 # ─── Market data: yfinance with light caching ──────────────────────────────────
 
+
 @dataclass
 class TickerSnapshot:
     """Compact view of a single ticker's recent state used by the LLM."""
+
     ticker: str
     name: str
     currency: str
@@ -174,13 +180,13 @@ class TickerSnapshot:
     macd: float | None
     macd_signal: float | None
     macd_hist: float | None
-    volume_ratio_20d: float | None     # today's volume vs 20-day average
+    volume_ratio_20d: float | None  # today's volume vs 20-day average
     recent_candles: list[dict[str, Any]]  # last 10 trading days for narrative
     last_close_date: str | None = None  # ISO date of last_close (e.g. "2026-04-29")
     # Extended-hours quote (US tickers; None for HK/JP/funds where unavailable)
     extended_price: float | None = None
     extended_pct_vs_close: float | None = None  # vs last_close (regular market)
-    market_state: str | None = None     # "PRE" | "REGULAR" | "POST" | "CLOSED" | None
+    market_state: str | None = None  # "PRE" | "REGULAR" | "POST" | "CLOSED" | None
     extended_timestamp: str | None = None
 
 
@@ -215,8 +221,10 @@ def _current_us_market_state() -> str | None:
     None    : if zoneinfo unavailable on the host
     """
     from datetime import datetime
+
     try:
         from zoneinfo import ZoneInfo
+
         ny = datetime.now(ZoneInfo("America/New_York"))
     except Exception:
         return None
@@ -291,8 +299,7 @@ def _fetch_aisa_ohlcv_df(ticker: str, period: str = "1y") -> Any:
     if "AISA_API_KEY" not in os.environ:
         load_env()
     if "AISA_API_KEY" not in os.environ:
-        for env_p in [HERMES_ENV,
-                       HERMES_HOME / "profiles" / "pm" / ".env"]:
+        for env_p in [HERMES_ENV, HERMES_HOME / "profiles" / "pm" / ".env"]:
             if env_p.exists():
                 for line in env_p.read_text().splitlines():
                     if line.strip().startswith("AISA_API_KEY="):
@@ -306,19 +313,32 @@ def _fetch_aisa_ohlcv_df(ticker: str, period: str = "1y") -> Any:
         return None
 
     # Map period string to approximate days for date range
-    _PERIOD_DAYS = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365,
-                     "2y": 730, "5y": 1825, "ytd": 365, "max": 3650}
+    _PERIOD_DAYS = {
+        "1mo": 30,
+        "3mo": 90,
+        "6mo": 180,
+        "1y": 365,
+        "2y": 730,
+        "5y": 1825,
+        "ytd": 365,
+        "max": 3650,
+    }
     days = _PERIOD_DAYS.get(period, 365)
     end_date = _dt.now().strftime("%Y-%m-%d")
     start_date = (_dt.now() - _td(days=days)).strftime("%Y-%m-%d")
 
-    url = (f"https://api.aisa.one/apis/v1/financial/prices"
-           f"?ticker={ticker}&interval=day&interval_multiplier=1"
-           f"&start_date={start_date}&end_date={end_date}")
-    req = _ur.Request(url, headers={
-        "Authorization": f"Bearer {aisa_key}",
-        "User-Agent": "AIsa-DSA/1.0",
-    })
+    url = (
+        f"https://api.aisa.one/apis/v1/financial/prices"
+        f"?ticker={ticker}&interval=day&interval_multiplier=1"
+        f"&start_date={start_date}&end_date={end_date}"
+    )
+    req = _ur.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {aisa_key}",
+            "User-Agent": "AIsa-DSA/1.0",
+        },
+    )
     try:
         with _ur.urlopen(req, timeout=20) as resp:
             data = _json.loads(resp.read().decode("utf-8"))
@@ -331,6 +351,7 @@ def _fetch_aisa_ohlcv_df(ticker: str, period: str = "1y") -> Any:
 
     # Convert to pandas DataFrame
     import pandas as pd
+
     rows = []
     for bar in results:
         ts = bar.get("t") or bar.get("timestamp") or bar.get("date") or bar.get("time")
@@ -340,14 +361,16 @@ def _fetch_aisa_ohlcv_df(ticker: str, period: str = "1y") -> Any:
         c = bar.get("c") or bar.get("close") or bar.get("Close")
         v = bar.get("v") or bar.get("volume") or bar.get("Volume") or 0
         if ts and c is not None:
-            rows.append({
-                "Date": pd.Timestamp(ts),
-                "Open": float(o or c),
-                "High": float(h or c),
-                "Low": float(l or c),
-                "Close": float(c),
-                "Volume": int(v or 0),
-            })
+            rows.append(
+                {
+                    "Date": pd.Timestamp(ts),
+                    "Open": float(o or c),
+                    "High": float(h or c),
+                    "Low": float(l or c),
+                    "Close": float(c),
+                    "Volume": int(v or 0),
+                }
+            )
     if len(rows) < 30:
         return None
     df = pd.DataFrame(rows).set_index("Date").sort_index()
@@ -356,7 +379,7 @@ def _fetch_aisa_ohlcv_df(ticker: str, period: str = "1y") -> Any:
 
 def fetch_snapshot(ticker: str, *, period: str = "1y") -> TickerSnapshot | None:
     """Fetch OHLCV and compute compact technical snapshot.
-    
+
     Price source priority: AIsa MarketPulse (primary) -> yfinance (fallback).
     """
     import yfinance as yf
@@ -395,13 +418,13 @@ def fetch_snapshot(ticker: str, *, period: str = "1y") -> TickerSnapshot | None:
         vol = df["Volume"]
 
         # Indicators
-        ma20  = float(close.tail(20).mean())  if len(close) >= 20  else None
-        ma50  = float(close.tail(50).mean())  if len(close) >= 50  else None
+        ma20 = float(close.tail(20).mean()) if len(close) >= 20 else None
+        ma50 = float(close.tail(50).mean()) if len(close) >= 50 else None
         ma200 = float(close.tail(200).mean()) if len(close) >= 200 else None
 
         # RSI(14)
         delta = close.diff()
-        up   = delta.clip(lower=0).ewm(span=14, adjust=False).mean()
+        up = delta.clip(lower=0).ewm(span=14, adjust=False).mean()
         down = (-delta.clip(upper=0)).ewm(span=14, adjust=False).mean()
         rs = up / down.replace(0, np.nan)
         rsi_series = 100 - (100 / (1 + rs))
@@ -426,24 +449,32 @@ def fetch_snapshot(ticker: str, *, period: str = "1y") -> TickerSnapshot | None:
         last_close = float(close.iloc[-1])
         prev_close = float(close.iloc[-2]) if len(close) >= 2 else last_close
         pct_1d = ((last_close / prev_close) - 1) * 100 if prev_close else 0.0
-        high_52w = float(close.tail(252).max()) if len(close) >= 252 else float(close.max())
-        low_52w  = float(close.tail(252).min()) if len(close) >= 252 else float(close.min())
+        high_52w = (
+            float(close.tail(252).max()) if len(close) >= 252 else float(close.max())
+        )
+        low_52w = (
+            float(close.tail(252).min()) if len(close) >= 252 else float(close.min())
+        )
         pct_from_high = ((last_close / high_52w) - 1) * 100 if high_52w else 0.0
-        pct_from_low  = ((last_close / low_52w) - 1) * 100 if low_52w else 0.0
+        pct_from_low = ((last_close / low_52w) - 1) * 100 if low_52w else 0.0
 
         # Recent candles for narrative
         recent: list[dict[str, Any]] = []
         last_close_date = None
         for idx, row in df.tail(10).iterrows():
-            date_str = idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx)
-            recent.append({
-                "date": date_str,
-                "open":  round(float(row["Open"]),  4),
-                "high":  round(float(row["High"]),  4),
-                "low":   round(float(row["Low"]),   4),
-                "close": round(float(row["Close"]), 4),
-                "vol":   int(row["Volume"]),
-            })
+            date_str = (
+                idx.strftime("%Y-%m-%d") if hasattr(idx, "strftime") else str(idx)
+            )
+            recent.append(
+                {
+                    "date": date_str,
+                    "open": round(float(row["Open"]), 4),
+                    "high": round(float(row["High"]), 4),
+                    "low": round(float(row["Low"]), 4),
+                    "close": round(float(row["Close"]), 4),
+                    "vol": int(row["Volume"]),
+                }
+            )
             last_close_date = date_str  # date of last bar
 
         # Metadata
@@ -451,8 +482,14 @@ def fetch_snapshot(ticker: str, *, period: str = "1y") -> TickerSnapshot | None:
         currency = "USD"
         try:
             info = getattr(ticker_obj, "fast_info", None) or {}
-            name = (info.get("longName") or info.get("shortName") or ticker) if hasattr(info, "get") else ticker
-            currency = (info.get("currency") or "USD") if hasattr(info, "get") else "USD"
+            name = (
+                (info.get("longName") or info.get("shortName") or ticker)
+                if hasattr(info, "get")
+                else ticker
+            )
+            currency = (
+                (info.get("currency") or "USD") if hasattr(info, "get") else "USD"
+            )
         except Exception:
             pass
 
@@ -464,7 +501,9 @@ def fetch_snapshot(ticker: str, *, period: str = "1y") -> TickerSnapshot | None:
             market_state = None  # HK/JP/SG: don't claim a US market state
 
         # Extended-hours price/divergence (only when meaningful)
-        ext = _fetch_extended_quote(ticker, last_close) if _is_us_ticker(ticker) else None
+        ext = (
+            _fetch_extended_quote(ticker, last_close) if _is_us_ticker(ticker) else None
+        )
 
         return TickerSnapshot(
             ticker=ticker,
@@ -565,8 +604,16 @@ def build_user_prompt(snap: TickerSnapshot) -> str:
         )
 
     # Extended-hours block — only present for US tickers in PRE/POST/CLOSED state
-    if snap.extended_price is not None and snap.market_state in ("PRE", "POST", "CLOSED"):
-        state_en = {"PRE": "pre-market", "POST": "post-market", "CLOSED": "after-close"}.get(snap.market_state, snap.market_state)
+    if snap.extended_price is not None and snap.market_state in (
+        "PRE",
+        "POST",
+        "CLOSED",
+    ):
+        state_en = {
+            "PRE": "pre-market",
+            "POST": "post-market",
+            "CLOSED": "after-close",
+        }.get(snap.market_state, snap.market_state)
         ts_short = (snap.extended_timestamp or "")[:16].replace("T", " ")
         extended_block = (
             f"[⚠ {state_en} latest price] {snap.extended_price} "
@@ -594,12 +641,16 @@ def build_user_prompt(snap: TickerSnapshot) -> str:
         macd=snap.macd if snap.macd is not None else "—",
         macd_signal=snap.macd_signal if snap.macd_signal is not None else "—",
         macd_hist=snap.macd_hist if snap.macd_hist is not None else "—",
-        volume_ratio_20d=snap.volume_ratio_20d if snap.volume_ratio_20d is not None else "—",
+        volume_ratio_20d=(
+            snap.volume_ratio_20d if snap.volume_ratio_20d is not None else "—"
+        ),
         recent_candles="\n".join(candles_lines),
     )
 
 
-def call_llm_dashboard(snap: TickerSnapshot, *, profile: str = "fast_scan") -> dict[str, Any] | None:
+def call_llm_dashboard(
+    snap: TickerSnapshot, *, profile: str = "fast_scan"
+) -> dict[str, Any] | None:
     """Run a single decision-dashboard analysis. Returns the parsed dict or None.
 
     Always tries to extract JSON from the response, even if the model wraps it
@@ -633,43 +684,54 @@ def call_llm_dashboard(snap: TickerSnapshot, *, profile: str = "fast_scan") -> d
     first = content.find("{")
     last = content.rfind("}")
     if first == -1 or last == -1 or last <= first:
-        print(f"[llm] {snap.ticker} no JSON braces in response: {content[:200]!r}", file=sys.stderr)
+        print(
+            f"[llm] {snap.ticker} no JSON braces in response: {content[:200]!r}",
+            file=sys.stderr,
+        )
         return None
     try:
-        data = json.loads(content[first:last + 1])
+        data = json.loads(content[first : last + 1])
     except json.JSONDecodeError as e:
         print(f"[llm] {snap.ticker} JSON parse failed: {e}", file=sys.stderr)
         return None
 
     # Decorate with metadata for downstream formatting
-    data.setdefault("_meta", {}).update({
-        "ticker": snap.ticker,
-        "name": snap.name,
-        "currency": snap.currency,
-        "last_close": snap.last_close,
-        "last_close_date": snap.last_close_date,
-        "pct_change_1d": snap.pct_change_1d,
-        "extended_price": snap.extended_price,
-        "extended_pct_vs_close": snap.extended_pct_vs_close,
-        "market_state": snap.market_state,
-        "extended_timestamp": snap.extended_timestamp,
-        "model": resp.model,
-        "as_of": date.today().isoformat(),
-    })
+    data.setdefault("_meta", {}).update(
+        {
+            "ticker": snap.ticker,
+            "name": snap.name,
+            "currency": snap.currency,
+            "last_close": snap.last_close,
+            "last_close_date": snap.last_close_date,
+            "pct_change_1d": snap.pct_change_1d,
+            "extended_price": snap.extended_price,
+            "extended_pct_vs_close": snap.extended_pct_vs_close,
+            "market_state": snap.market_state,
+            "extended_timestamp": snap.extended_timestamp,
+            "model": resp.model,
+            "as_of": date.today().isoformat(),
+        }
+    )
     return data
 
 
 # ─── Markdown formatting (chat-friendly) ───────────────────────────────────────
 
 SIGNAL_EMOJI = {
-    "Buy": "🟢🟢", "Add": "🟢", "Hold": "⚪",
-    "Watch": "⚪", "Reduce": "🔴", "Sell": "🔴🔴",
+    "Buy": "🟢🟢",
+    "Add": "🟢",
+    "Hold": "⚪",
+    "Watch": "⚪",
+    "Reduce": "🔴",
+    "Sell": "🔴🔴",
 }
 
 
 def signal_severity(signal: str) -> int:
-    """Lower = more bearish, higher = more bullish. Used for sorting port-health."""
-    return {"Sell": -2, "Reduce": -1, "Watch": 0, "Hold": 0, "Add": 1, "Buy": 2}.get(signal, 0)
+    """Lower = more bearish, higher = more bullish. Used for sorting portfolio-health."""
+    return {"Sell": -2, "Reduce": -1, "Watch": 0, "Hold": 0, "Add": 1, "Buy": 2}.get(
+        signal, 0
+    )
 
 
 def format_dashboard(data: dict[str, Any]) -> str:
@@ -714,11 +776,17 @@ def format_dashboard(data: dict[str, Any]) -> str:
     ext_state = meta.get("market_state")
     if ext_price is not None and ext_state in ("PRE", "POST", "CLOSED"):
         ext_pct = meta.get("extended_pct_vs_close", 0.0) or 0.0
-        state_en = {"PRE": "🌅 Pre-market", "POST": "🌆 Post-market", "CLOSED": "🌙 Closed"}.get(ext_state, ext_state)
+        state_en = {
+            "PRE": "🌅 Pre-market",
+            "POST": "🌆 Post-market",
+            "CLOSED": "🌙 Closed",
+        }.get(ext_state, ext_state)
         ts = (meta.get("extended_timestamp") or "")[:16].replace("T", " ")
         # Highlight large moves
         big_move = "‼️ " if abs(ext_pct) >= 2.0 else ""
-        lines.append(f"{state_en} {big_move}{ext_price} ({ext_pct:+.2f}% vs close) — {ts}")
+        lines.append(
+            f"{state_en} {big_move}{ext_price} ({ext_pct:+.2f}% vs close) — {ts}"
+        )
 
     lines += [
         "",
@@ -744,9 +812,9 @@ def format_dashboard(data: dict[str, Any]) -> str:
 
     lines.append("")
     lines.append("*▎Battle plan*")
-    for ent in (bp.get("entry_targets") or []):
+    for ent in bp.get("entry_targets") or []:
         lines.append(f"🎯 Entry: {ent}")
-    for ext in (bp.get("exit_targets") or []):
+    for ext in bp.get("exit_targets") or []:
         lines.append(f"🏁 Exit: {ext}")
     sl = bp.get("stop_loss")
     if sl:
@@ -763,12 +831,14 @@ def format_dashboard(data: dict[str, Any]) -> str:
 
 
 def format_portfolio_summary(results: list[dict[str, Any]]) -> str:
-    """Render a one-message summary of port-health scan results."""
+    """Render a one-message summary of portfolio-health scan results."""
     # Sort by severity ascending: bearish first
     sorted_r = sorted(
         results,
-        key=lambda r: (signal_severity(r.get("core_conclusion", {}).get("signal", "Watch")),
-                       -(r.get("core_conclusion", {}).get("confidence") or 0)),
+        key=lambda r: (
+            signal_severity(r.get("core_conclusion", {}).get("signal", "Watch")),
+            -(r.get("core_conclusion", {}).get("confidence") or 0),
+        ),
     )
 
     lines = [f"🩺 *Portfolio Health Scan* — {date.today().isoformat()}", ""]
@@ -802,7 +872,9 @@ def format_portfolio_summary(results: list[dict[str, Any]]) -> str:
         lines.append("*🟢 Maintain/Add*")
         lines.extend(bull)
         lines.append("")
-    lines.append(f"_Scanned {len(results)} tickers — see following messages for detail_")
+    lines.append(
+        f"_Scanned {len(results)} tickers — see following messages for detail_"
+    )
     return "\n".join(lines)
 
 

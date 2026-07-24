@@ -1,6 +1,6 @@
 {
   "name": "aisa-cio",
-  "version": "1.3.7",
+  "version": "1.3.9",
   "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Responds in English.",
   "author": {
     "name": "AIsa",
@@ -25,7 +25,7 @@
     "privacyPolicyURL": "https://aisa.one/privacy",
     "termsOfServiceURL": "https://aisa.one/TOS",
     "defaultPrompt": [
-      "port",
+      "portfolio",
       "scan AAPL",
       "market brief US",
       "ta NVDA"

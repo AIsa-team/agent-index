@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `scan NVDA` | `dsa_scan.py NVDA` | ~1–2 min | DSA decision dashboard for NVDA → stdout markers |
 | `scan NVDA MSFT 0700.HK` | `dsa_scan.py NVDA MSFT 0700.HK` | ~3–6 min | one dashboard per ticker → stdout markers |
-| `port health` | `dsa_port_health.py` | ~5–10 min | summary table + bearish detail dashboards → stdout markers |
+| `portfolio health` | `dsa_port_health.py` | ~5–10 min | summary table + bearish detail dashboards → stdout markers |
 | `brief US` | `dsa_market_brief.py US` | ~30 s | indices + sector rotation summary → stdout markers |
 | `brief HK` | `dsa_market_brief.py HK` | ~30 s | HSI + HSCEI + HSTECH brief → stdout markers |
 

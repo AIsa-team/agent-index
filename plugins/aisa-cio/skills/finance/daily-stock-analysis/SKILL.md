@@ -1,6 +1,6 @@
 ---
 name: daily-stock-analysis
-description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: scan TICKER (or 扫 TICKER, quick TICKER) for single/multi quick analysis; port health (or port-health, 持仓健康) for batch portfolio scan; market brief HK/US (or brief HK/US, 市场简报 HK/US) for index+sector overview. Output is a DSA-style 决策看板 / 市场简报 emitted on stdout for you to deliver."
+description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: scan TICKER (or 扫 TICKER, quick TICKER) for single/multi quick analysis; portfolio health (or portfolio-health, 持仓健康) for batch portfolio scan; market brief HK/US (or brief HK/US, 市场简报 HK/US) for index+sector overview. Output is a DSA-style 决策看板 / 市场简报 emitted on stdout for you to deliver."
 ---
 
 > **Runtime bootstrap (dsa)** — this skill's scripts need a Python venv.
@@ -32,7 +32,7 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 | User's message pattern | Script to run | Notes |
 |---|---|---|
 | `scan TICKER [TICKER ...]`, `扫 TICKER`, `quick TICKER` | `dsa_scan.py TICKER ...` | 1–8 tickers; ~1–3 min each |
-| `port health`, `port-health`, `持仓健康`, `持仓体检`, `健康扫描` | `dsa_port_health.py` | reads `portfolio_truth.json`, ~5–10 min total |
+| `portfolio health`, `portfolio-health`, `持仓健康`, `持仓体检`, `健康扫描` | `dsa_port_health.py` | reads `portfolio_truth.json`, ~5–10 min total |
 | `market brief HK`, `brief HK`, `市场简报 HK`, `港股简报` | `dsa_market_brief.py HK` | ~30 s |
 | `market brief US`, `brief US`, `市场简报 US`, `美股简报` | `dsa_market_brief.py US` | ~30 s |
 
@@ -40,8 +40,8 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 
 ## Trigger word disambiguation
 
-- **Exact `port`** → use the existing `portfolio-report` skill (live P&L). NOT this skill.
-- **`port health` / `持仓健康`** → THIS skill (`dsa_port_health.py`).
+- **Exact `portfolio`** → use the existing `portfolio-report` skill (live P&L). NOT this skill.
+- **`portfolio health` / `持仓健康`** → THIS skill (`dsa_port_health.py`).
 - **`ta TICKER` / `research TICKER` / `研究 TICKER`** → use the existing `trading-agents-research` skill (~5 min deep multi-agent analysis). NOT this skill.
 - **`scan TICKER` / `quick TICKER`** → THIS skill (~1–3 min light technical scan).
 - The two are complementary: use `scan` for daily monitoring, `ta` for high-conviction deep dives.
@@ -70,7 +70,7 @@ sys.stderr.write(result.stderr)
 
 ### 2. Portfolio batch health scan
 
-User says: `port health`
+User says: `portfolio health`
 
 ```python
 import subprocess, sys

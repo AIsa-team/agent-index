@@ -2,7 +2,7 @@
 # Pinned dependencies for the OPTIONAL daily-stock-analysis (DSA) skill venv.
 #
 # Installed by `bootstrap.sh` (the DSA step) into  ~/.hermes/profiles/<id>/.dsa-venv
-# ONLY if you opt in. The core CIO + `port` valuation engine is pure stdlib and
+# ONLY if you opt in. The core CIO + `portfolio` valuation engine is pure stdlib and
 # needs NONE of this — these power the deeper `scan TICKER` / `ta TICKER` paths.
 #
 #   python3 -m venv .dsa-venv
