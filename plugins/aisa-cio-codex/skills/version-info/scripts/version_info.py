@@ -45,8 +45,8 @@ def resolve_profile_dir() -> Path:
         if v:
             return Path(v).expanduser()
     # walk up from the script itself: works for both
-    #   <profile>/skills/ops/version-info/scripts/version_info.py          (user skills)
-    #   <profile>/.agentspec-content/current/skills/ops/.../version_info.py (managed)
+    #   <profile>/skills/version-info/scripts/version_info.py              (user skills)
+    #   <profile>/.agentspec-content/current/skills/version-info/.../version_info.py (managed)
     here = Path(__file__).resolve()
     for anc in here.parents:
         if any((anc / f).exists() for f in PROFILE_ANCHOR_FILES):
