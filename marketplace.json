@@ -5,17 +5,6 @@
   },
   "plugins": [
     {
-      "name": "cio",
-      "source": {
-        "source": "local",
-        "path": "./plugins/cio-codex"
-      },
-      "policy": {
-        "installation": "AVAILABLE"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "aisa-cio",
       "source": {
         "source": "local",
