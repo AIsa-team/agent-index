@@ -79,7 +79,8 @@
               "sha256": "3220d218edf41c0b17e17ac84da2427f1051babc52a0c36e6625ce9cfbaa4330",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.4.0/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.4.0/install-hermes.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.4.0/guide-prompt-hermes.txt"
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.4.0/guide-prompt-hermes.txt",
+              "e2bTemplate": "hermes-aisa-cio-1-4-0"
             },
             "openclaw": {
               "url": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.4.0/aisa-cio-openclaw-v1.4.0.tar.gz",
