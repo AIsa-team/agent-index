@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 case "$NAME" in
   dsa) REQ="requirements/dsa.txt";;
   ta) REQ="requirements/ta.txt";;
+  sec-filings) REQ="requirements/sec-filings.txt";;
   *) echo "unknown venv name: $NAME" >&2; exit 1;;
 esac
 VENV="$ROOT/.venvs/$NAME"

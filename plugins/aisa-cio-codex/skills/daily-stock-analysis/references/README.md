@@ -35,7 +35,7 @@ __REPORT_START__ <full report> + DONE: ... __REPORT_END__
 
 - `~/.aisa/agents/aisa-cio/portfolio/portfolio_truth.json` — read-only access
 - `~/.aisa/agents/aisa-cio/portfolio/portfolio_rules.json` — never read
-- All other `portfolio-*` skills under `${PLUGIN_ROOT}/skills/finance/`
+- All other `portfolio-*` skills under `${PLUGIN_ROOT}/skills/`
 - `~/.hermes/config.yaml`, `~/.hermes/secrets/*.key`, `~/.hermes/channel_directory.json` — read-only
 - ubuntu user crontab (the 18:00 SGT portfolio_cron job is preserved as-is)
 
@@ -43,7 +43,7 @@ __REPORT_START__ <full report> + DONE: ... __REPORT_END__
 
 ```bash
 ${PLUGIN_ROOT}/.venvs/dsa/bin/python \
-    ${PLUGIN_ROOT}/skills/finance/daily-stock-analysis/scripts/dsa_scan.py \
+    ${PLUGIN_ROOT}/skills/daily-stock-analysis/scripts/dsa_scan.py \
     NVDA
 ```
 

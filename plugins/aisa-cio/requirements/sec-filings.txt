@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Pinned dependency for the OPTIONAL sec-filings skill venv.
+#
+# Installed by the platform's `setup.python` step (name: sec-filings) ONLY if you
+# opt in. Powers deep SEC filing research (10-K sections, notes, 13F, Form 4,
+# market-wide scans) via skills/sec-filings. The core CIO needs NONE of
+# this — quick financials keep flowing through marketpulse.
+#
+#   python3 -m venv .sec-venv
+#   .sec-venv/bin/pip install -r requirements/sec-filings.txt
+#   # then point SEC_VENV_PYTHON at .sec-venv/bin/python
+#
+# `edgartools` is the upstream pip package this skill drives; the skill itself is
+# named for the capability (SEC filings), not the library.
+#
+# The skill docs in skills/sec-filings/references/upstream/ are vendored
+# from this exact version — bump the pin and the vendored docs TOGETHER.
+# ─────────────────────────────────────────────────────────────────────────────
+edgartools==5.43.0

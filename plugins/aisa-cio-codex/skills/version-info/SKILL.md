@@ -14,7 +14,7 @@ Run via `execute_code`:
 ```python
 import subprocess, sys
 result = subprocess.run(
-    [sys.executable, "${PLUGIN_ROOT}/skills/ops/version-info/scripts/version_info.py"],
+    [sys.executable, "${PLUGIN_ROOT}/skills/version-info/scripts/version_info.py"],
     capture_output=True, text=True, timeout=60,
 )
 print(result.stdout)

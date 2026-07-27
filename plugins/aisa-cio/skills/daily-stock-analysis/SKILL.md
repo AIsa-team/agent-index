@@ -14,7 +14,7 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 > - `~/.aisa/agents/aisa-cio/portfolio` — Portfolio data directory (portfolio_truth.json / engine scripts)(export `PORTFOLIO_DIR` to override — if set, use its value instead of this default)
 
 > **Required credentials** — scripts resolve these as: env var → `~/.aisa/credentials` (KEY=VALUE lines):
-> - `AISA_API_KEY` — AISA multi-model gateway — default LLM + aisa-* skills (search / marketpulse / prediction-markets / twitter). No key yet? Get one at https://console.aisa.one/get-started (takes about a minute).
+> - `AISA_API_KEY` — AISA multi-model gateway — default LLM + the agent-skills data skills (marketpulse / multi-source-search / prediction-market-data / aisa-twitter-api / last30days). No key yet? Get one at https://console.aisa.one/get-started (takes about a minute).
 > If a value is missing, do NOT fail silently and do NOT just tell the user to "export" it.
 > Guide them through setup right here in the conversation:
 > 1. If they don't have the key, give them the sign-up link above and wait.
@@ -42,9 +42,10 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 
 - **Exact `portfolio`** → use the existing `portfolio-report` skill (live P&L). NOT this skill.
 - **`portfolio health` / `持仓健康`** → THIS skill (`dsa_port_health.py`).
-- **`ta TICKER` / `research TICKER` / `研究 TICKER`** → use the existing `trading-agents-research` skill (~5 min deep multi-agent analysis). NOT this skill.
+- **`deep TICKER` / `ta TICKER` / `research TICKER` / `研究 TICKER`** → use the existing `trading-agents-research` skill (~9 min full multi-agent analysis). NOT this skill.
+- **`fast-research TICKER` / `快研 TICKER`** → also `trading-agents-research`, fast mode (~3–5 min, market+fundamentals analysts only). NOT this skill.
 - **`scan TICKER` / `quick TICKER`** → THIS skill (~1–3 min light technical scan).
-- The two are complementary: use `scan` for daily monitoring, `ta` for high-conviction deep dives.
+- The three are complementary: `scan` for daily monitoring, `fast-research` for a quick multi-agent read, `deep` for high-conviction deep dives.
 
 ## How to invoke
 
@@ -59,7 +60,7 @@ import subprocess, sys
 result = subprocess.run(
     [
         "${CLAUDE_PLUGIN_ROOT}/.venvs/dsa/bin/python",
-        "${CLAUDE_PLUGIN_ROOT}/skills/finance/daily-stock-analysis/scripts/dsa_scan.py",
+        "${CLAUDE_PLUGIN_ROOT}/skills/daily-stock-analysis/scripts/dsa_scan.py",
         "NVDA", "MSFT",
     ],
     capture_output=True, text=True, timeout=900,
@@ -77,7 +78,7 @@ import subprocess, sys
 result = subprocess.run(
     [
         "${CLAUDE_PLUGIN_ROOT}/.venvs/dsa/bin/python",
-        "${CLAUDE_PLUGIN_ROOT}/skills/finance/daily-stock-analysis/scripts/dsa_port_health.py",
+        "${CLAUDE_PLUGIN_ROOT}/skills/daily-stock-analysis/scripts/dsa_port_health.py",
     ],
     capture_output=True, text=True, timeout=1800,
 )
@@ -94,7 +95,7 @@ import subprocess, sys
 result = subprocess.run(
     [
         "${CLAUDE_PLUGIN_ROOT}/.venvs/dsa/bin/python",
-        "${CLAUDE_PLUGIN_ROOT}/skills/finance/daily-stock-analysis/scripts/dsa_market_brief.py",
+        "${CLAUDE_PLUGIN_ROOT}/skills/daily-stock-analysis/scripts/dsa_market_brief.py",
         "US",
     ],
     capture_output=True, text=True, timeout=300,
@@ -126,7 +127,7 @@ AISA gateway (which serves the DeepSeek models) is unreachable.
 
 ## Resources
 
-- Scripts:    `${CLAUDE_PLUGIN_ROOT}/skills/finance/daily-stock-analysis/scripts/`
+- Scripts:    `${CLAUDE_PLUGIN_ROOT}/skills/daily-stock-analysis/scripts/`
 - Shared lib: `_dsa_lib.py` (model routing, yfinance, formatting, report markers)
 - Venv python: `${CLAUDE_PLUGIN_ROOT}/.venvs/dsa/bin/python` (managed by the platform's `setup.python` step)
 - Holdings:   `~/.aisa/agents/aisa-cio/portfolio/portfolio_truth.json` (read-only)

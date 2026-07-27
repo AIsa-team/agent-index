@@ -1,12 +1,12 @@
 ---
 name: trading-agents-research
-description: "AUTO-INVOKE when user says ta [ticker], research [ticker], or 研究 [ticker]. Runs the real TradingAgents multi-agent framework (analysts + debate + risk + PM) for a single stock ticker."
+description: "AUTO-INVOKE on the command forms `deep TICKER` / `ta TICKER` / `research TICKER` / `研究 TICKER` (full mode) and `fast-research TICKER` / `快研 TICKER` (fast mode) — a trigger word plus a ticker symbol. Runs the real TradingAgents multi-agent framework (analysts + debate + risk + PM) for a single stock ticker. NOT for free-form 'deep research' prose without a ticker — that is `multi-source-search`'s job."
 references:
   - scripts/call_trading_agents.py
 ---
 
 > **Required credentials** — scripts resolve these as: env var → `~/.aisa/credentials` (KEY=VALUE lines):
-> - `AISA_API_KEY` — AISA multi-model gateway — default LLM + aisa-* skills (search / marketpulse / prediction-markets / twitter). No key yet? Get one at https://console.aisa.one/get-started (takes about a minute).
+> - `AISA_API_KEY` — AISA multi-model gateway — default LLM + the agent-skills data skills (marketpulse / multi-source-search / prediction-market-data / aisa-twitter-api / last30days). No key yet? Get one at https://console.aisa.one/get-started (takes about a minute).
 > If a value is missing, do NOT fail silently and do NOT just tell the user to "export" it.
 > Guide them through setup right here in the conversation:
 > 1. If they don't have the key, give them the sign-up link above and wait.
@@ -17,24 +17,34 @@ references:
 > If the user prefers not to paste secrets into chat, offer the alternative: they export the
 > env var themselves in the host's environment, then restart the host. 不要静默失败 / never fail silently.
 
-### Trading Agents Single Ticker Deep Research
+### Trading Agents Single Ticker Research
 
-Calls the **real** TradingAgents multi-agent framework. Runtime ≈ 15-20 minutes.
+Calls the **real** TradingAgents multi-agent framework. Two modes:
+
+| Mode | Triggers | Pipeline | Runtime |
+|---|---|---|---|
+| **full** (default) | `deep [ticker]`, `ta [ticker]`, `research [ticker]`, `研究 [ticker]` | all 4 analysts (market/sentiment/news/fundamentals) + debate + risk + PM; hybrid pro+flash models | ≈ 9 minutes |
+| **fast** | `fast-research [ticker]`, `快研 [ticker]` | market + fundamentals analysts only + debate + risk + PM; all-flash models | ≈ 3-5 minutes |
+
+Fast mode trades the News and Sentiment analyst branches for speed; its report
+carries an explicit `[FAST MODE …]` header. For news/sentiment coverage use
+`scan [ticker]` or `marketpulse`/`multi-source-search` alongside it.
 
 The script runs in the **background** and caches the finished report on disk
-(`~/.tradingagents/results/<TICKER>/<date>-report.txt`). Your jobs are to
+(`~/.tradingagents/results/<TICKER>/<date>-report.txt` for full mode,
+`<date>-fast-report.txt` for fast mode). Your jobs are to
 (1) confirm the research started, (2) retrieve the cached report with
-`--resend` when the user asks for the result (or after ~20 minutes), and
+`resend=True` when the user asks for the result (or after the ETA), and
 (3) handle any error status.
 
 ---
 
 #### HOW TO LAUNCH RESEARCH
 
-**Step 1** — Extract the ticker from the user's message (uppercase, strip whitespace). Tell the user:
-`Starting TradingAgents research for <TICKER>. This takes 15-20 minutes — ask me for the result later (e.g. "resend <TICKER>") and I will fetch the finished report.`
+**Step 1** — Extract the ticker from the user's message (uppercase, strip whitespace) and decide the mode from the trigger word (`fast-research`/`快研` → `"fast"`, everything else → `"full"`). Tell the user:
+`Starting TradingAgents <mode> research for <TICKER>. This takes ~9 minutes (full) / ~3-5 minutes (fast) — ask me for the result later (e.g. "resend <TICKER>") and I will fetch the finished report.`
 
-**Step 2** — Call `execute_code` ONCE with `timeout=60`. Replace `<TICKER>` with the uppercase ticker string (e.g. `"NVDA"`):
+**Step 2** — Call `execute_code` ONCE with `timeout=60`. Replace `<TICKER>` with the uppercase ticker string (e.g. `"NVDA"`) and `<MODE>` with `"full"` or `"fast"`:
 
 ```python
 import os, importlib.util, sys
@@ -45,7 +55,7 @@ mod = importlib.util.module_from_spec(spec)
 sys.modules["call_ta_module"] = mod
 spec.loader.exec_module(mod)
 
-status = mod.run_in_background(<TICKER>)
+status = mod.run_in_background(<TICKER>, mode=<MODE>)
 print(status)
 ```
 
@@ -62,7 +72,7 @@ The output MUST start with exactly one of: `STARTED:`, `DONE:`, or `FAILED:`.
 
 #### HOW TO RETRIEVE THE FINISHED REPORT
 
-When the user asks for the result (**"resend [ticker]"** / **"重新发送 [ticker]"** / "研究结果好了吗"), fetch it from cache without re-running TA:
+When the user asks for the result (**"resend [ticker]"** / **"重新发送 [ticker]"** / "研究结果好了吗"), fetch it from cache without re-running TA. Use the **same mode** as the launch (fast runs are only in the fast cache and vice versa; if unsure which was launched, try `"full"` first, then `"fast"`):
 
 ```python
 import os, importlib.util, sys
@@ -73,22 +83,26 @@ mod = importlib.util.module_from_spec(spec)
 sys.modules["call_ta_module"] = mod
 spec.loader.exec_module(mod)
 
-status = mod.run_and_report(<TICKER>, resend=True)
+status = mod.run_and_report(<TICKER>, resend=True, mode=<MODE>)
 print(status)
 ```
 
 Use `execute_code` with `timeout=120` for this call (it only reads cache, no TA run).
 
-- `DONE:` → the full report follows. Deliver sections **1. FINAL DECISION** and **2. TRADING PLAN** verbatim; then offer the remaining sections (debate, risk, analyst reports) on request or deliver them in follow-up messages. Do not rewrite or summarise the decision/plan content itself.
-- `FAILED: No cached result found` → research is still running (or was never started). Tell the user to wait, or launch a fresh run if none was started today.
+- `DONE:` → the full report follows. Deliver sections **1. FINAL DECISION** and **2. TRADING PLAN** verbatim; then offer the remaining sections (debate, risk, analyst reports) on request or deliver them in follow-up messages. Do not rewrite or summarise the decision/plan content itself. If the report carries a `[FAST MODE …]` header, keep that header visible so the user knows news/sentiment were not consulted.
+- `FAILED: No cached ... result found` → research is still running (or was never started, or was launched in the other mode). Tell the user to wait, check the other mode's cache, or launch a fresh run if none was started today.
 
 ---
 
 #### Parameters
 - `ticker`: Stock ticker symbol (e.g., `"NVDA"`, `"AAPL"`, `"AMD"`)
+- `mode`: `"full"` (default) or `"fast"`
 
 #### Rules
+- **Command forms only.** Auto-invoke on `deep TICKER` / `fast-research TICKER` / `ta TICKER` / `research TICKER` / `研究 TICKER` / `快研 TICKER` — a trigger word followed by a ticker symbol. Do NOT auto-invoke on free-form prose that merely contains the word "deep" ("do a deep dive on the chip cycle", "deep research on tariffs") — that is narrative research and belongs to `multi-source-search`. If the intent is ambiguous, ask which the user wants instead of burning a 9-minute run.
 - Call `run_in_background` **exactly ONCE** per research request — never loop or retry.
 - The result IS cached on disk after every successful run. Use **resend** to retrieve it — never a fresh run just to re-read a report.
+- Full and fast caches are separate; a fast run never overwrites a full report (and vice versa).
 - If you get `FAILED:`, report the error to the user and stop. Do not retry automatically.
 - **Never** compose research content from memory — 100% of user-facing research comes from the report text printed by the script.
+- **Never** present a fast-mode report as full research — the `[FAST MODE …]` header must reach the user.

@@ -14,6 +14,12 @@ Optimisations (2026-04-26):
       (+ <date>-report.txt); --resend re-prints without re-running TA
   #9  run_in_background() launches TA as a detached subprocess and returns
       immediately with STARTED: so the LLM conversation is never blocked
+
+Fast mode (2026-07-25):
+  --fast runs a reduced pipeline: selected_analysts=("market","fundamentals")
+  (official TradingAgentsGraph constructor arg) + all-flash models. ~3-5 min
+  vs ~9 min full. Fast artifacts use a `-fast` filename suffix so they never
+  collide with full-mode caches/logs of the same ticker+date.
 """
 import json
 import os
@@ -178,7 +184,7 @@ config["max_debate_rounds"]       = 1
 config["max_risk_discuss_rounds"] = 1
 {thinking_config_line}
 
-ta = TradingAgentsGraph(debug=False, config=config)
+ta = TradingAgentsGraph({selected_analysts_arg}debug=False, config=config)
 final_state, decision = ta.propagate({ticker!r}, {trade_date!r})
 
 def _str(v):
@@ -192,6 +198,7 @@ result = {{
     "success": True,
     "ticker": {ticker!r},
     "trade_date": {trade_date!r},
+    "mode": {mode!r},
     "provider_used": {llm_provider!r},
     "model_used": {deep_think_llm!r},
     "decision": _str(decision),
@@ -211,13 +218,34 @@ print("__TA_RESULT__:" + json.dumps(result, ensure_ascii=False))
 """
 
 
-def _build_runner_args(provider: str, ticker: str, trade_date: str) -> dict | None:
+VALID_MODES = ("full", "fast")
+
+# Fast mode: official TradingAgentsGraph constructor arg — drop the News and
+# Sentiment analyst branches (technicals + fundamentals form the decision
+# skeleton; news/sentiment gaps are covered ad-hoc by `scan` / marketpulse).
+FAST_ANALYSTS = ("market", "fundamentals")
+
+
+def _build_runner_args(provider: str, ticker: str, trade_date: str,
+                       mode: str = "full") -> dict | None:
     """Resolve provider-specific args for RUNNER_TEMPLATE.
 
     Returns a dict suitable for ``RUNNER_TEMPLATE.format(**args)`` or None if
     the required API key is missing for this provider.
+
+    ``mode="fast"`` reduces the pipeline: only market+fundamentals analysts
+    and all-flash models (deep_think downgraded to the quick model).
     """
-    common = dict(ta_dir=TA_DIR, ticker=ticker.upper(), trade_date=trade_date)
+    fast = mode == "fast"
+    common = dict(
+        ta_dir=TA_DIR,
+        ticker=ticker.upper(),
+        trade_date=trade_date,
+        mode=mode,
+        selected_analysts_arg=(
+            f"selected_analysts={FAST_ANALYSTS!r}, " if fast else ""
+        ),
+    )
 
     if provider == "gemini":
         api_key = (_read_env_value(GEMINI_API_KEY_ENV)
@@ -266,7 +294,8 @@ def _build_runner_args(provider: str, ticker: str, trade_date: str) -> dict | No
             "api_key":             api_key,
             "backend_url_line":    'config["backend_url"] = "https://api.aisa.one/v1"',
             "llm_provider":        "deepseek",
-            "deep_think_llm":      "deepseek-v4-pro",
+            # fast mode: all-flash (deep_think downgraded); full keeps hybrid
+            "deep_think_llm":      "deepseek-v4-flash" if fast else "deepseek-v4-pro",
             "quick_think_llm":     "deepseek-v4-flash",
             # upstream openai_client requires DEEPSEEK_API_KEY for provider=deepseek
             "extra_env_lines":     'os.environ["DEEPSEEK_API_KEY"] = ' + repr(api_key),
@@ -297,22 +326,40 @@ def _build_runner_args(provider: str, ticker: str, trade_date: str) -> dict | No
 
 # -- Cache helpers (#7) --------------------------------------------------------
 
-def _cache_result(ticker: str, trade_date: str, result: dict) -> str:
-    """Persist result dict to ~/.tradingagents/results/<TICKER>/<date>-result.json.
+def _mode_suffix(mode: str) -> str:
+    """Filename infix for a mode: '' for full (legacy paths), '-fast' for fast.
 
+    Only the two known modes map to a suffix. An unknown mode raises instead of
+    silently minting a `-<anything>` cache namespace — otherwise a future caller
+    passing e.g. mode="speedy" would get full-pipeline models (``fast`` is False)
+    writing into a separate cache that no resend path ever reads.
+    """
+    if mode not in VALID_MODES:
+        raise ValueError(f"unknown research mode {mode!r} (expected one of {VALID_MODES})")
+    return "" if mode == "full" else f"-{mode}"
+
+
+def _cache_result(ticker: str, trade_date: str, result: dict,
+                  mode: str = "full") -> str:
+    """Persist result dict to ~/.tradingagents/results/<TICKER>/<date>[-fast]-result.json.
+
+    Full-mode paths are unchanged from the legacy layout; fast mode gets a
+    ``-fast`` suffix so the two never overwrite each other.
     Returns the cache file path.  Non-fatal: caller should catch exceptions.
     """
     cache_dir = os.path.join(CACHE_DIR, ticker)
     os.makedirs(cache_dir, exist_ok=True)
-    path = os.path.join(cache_dir, f"{trade_date}-result.json")
+    path = os.path.join(cache_dir, f"{trade_date}{_mode_suffix(mode)}-result.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     return path
 
 
-def _load_cached_result(ticker: str, trade_date: str) -> dict | None:
-    """Load cached result for ticker/date, or return None if not found."""
-    path = os.path.join(CACHE_DIR, ticker, f"{trade_date}-result.json")
+def _load_cached_result(ticker: str, trade_date: str,
+                        mode: str = "full") -> dict | None:
+    """Load cached result for ticker/date/mode, or return None if not found."""
+    path = os.path.join(CACHE_DIR, ticker,
+                        f"{trade_date}{_mode_suffix(mode)}-result.json")
     if os.path.exists(path):
         try:
             with open(path, encoding="utf-8") as f:
@@ -324,7 +371,8 @@ def _load_cached_result(ticker: str, trade_date: str) -> dict | None:
 
 # -- Core TA runner ------------------------------------------------------------
 
-def _try_provider(provider: str, ticker: str, trade_date: str) -> dict:
+def _try_provider(provider: str, ticker: str, trade_date: str,
+                  mode: str = "full") -> dict:
     """Run TradingAgents once with the given provider configuration.
 
     Returns a result dict with {"success": bool, ...}. The dict carries
@@ -348,7 +396,7 @@ def _try_provider(provider: str, ticker: str, trade_date: str) -> dict:
             ),
         }
 
-    args = _build_runner_args(provider, ticker, trade_date)
+    args = _build_runner_args(provider, ticker, trade_date, mode)
     if args is None:
         return {
             "success": False,
@@ -364,8 +412,8 @@ def _try_provider(provider: str, ticker: str, trade_date: str) -> dict:
         tmp.close()
 
         print(
-            f"[{provider}] Starting TradingAgents for {ticker.upper()} "
-            f"({trade_date}) using {args['deep_think_llm']}...",
+            f"[{provider}] Starting TradingAgents ({mode} mode) for "
+            f"{ticker.upper()} ({trade_date}) using {args['deep_think_llm']}...",
             flush=True,
         )
         proc = subprocess.run(
@@ -413,38 +461,50 @@ def _try_provider(provider: str, ticker: str, trade_date: str) -> dict:
     }
 
 
-def call_trading_agents_api(ticker: str) -> dict:
-    """Run TradingAgents with provider fallback chain.
+def call_trading_agents_api(ticker: str, mode: str = "full") -> dict:
+    """Run TradingAgents over PROVIDER_CHAIN, caching the first success.
 
-    Tier 2 routing: try Gemini-2.5-flash:thinking first; on failure (transient
-    503, library error, missing key, etc.) retry the entire run with
-    DeepSeek-v4-flash. Caches the first successful result and returns it.
+    Full mode: the two entries are genuinely different configs (-pro then the
+    lighter -flash), so the second attempt is a real fallback.
 
-    Note: process-level fallback means a Gemini failure mid-run causes a full
-    DeepSeek re-run from scratch (extra ~15 min). Acceptable for resilience
-    against rare hard outages; transient mid-stream errors should be handled
-    by langchain's built-in per-call retry.
+    Fast mode: both entries resolve to the SAME all-flash config, so the second
+    attempt is a transient-failure RETRY rather than provider diversity. This is
+    deliberate and empirically load-bearing — in the 2026-07-25 AAPL fast
+    verification the first attempt died on a non-deterministic subprocess
+    failure and the identical retry completed the run. A retry succeeding on an
+    unchanged config is itself evidence the failure class is transient, so
+    dropping it would convert recoverable blips into hard failures. Cost when it
+    does fire is one extra fast run (~3-5 min).
     """
+    if mode not in VALID_MODES:
+        return {
+            "success": False,
+            "error": f"Unknown research mode {mode!r} (expected one of {VALID_MODES}).",
+        }
     trade_date = date.today().isoformat()
     last_failure: dict | None = None
 
     for provider in PROVIDER_CHAIN:
-        result = _try_provider(provider, ticker, trade_date)
+        result = _try_provider(provider, ticker, trade_date, mode)
         if result.get("success"):
             try:
                 _cache_result(
                     ticker.upper(),
                     result.get("trade_date", trade_date),
                     result,
+                    mode,
                 )
             except Exception:
                 pass  # cache failure is non-fatal
             return result
-        # Log and try next provider
+        # Log and try next provider. Include the stderr tail so transient
+        # failures are diagnosable from the log without re-running.
         err = result.get("error", "unknown")
+        detail = result.get("stderr") or result.get("stdout") or ""
         print(
             f"[{provider}] TradingAgents failed: {err[:200]} — "
-            f"falling back to next provider in chain",
+            f"falling back to next provider in chain"
+            + (f"\n[{provider}] stderr tail: {detail[-500:]}" if detail else ""),
             file=sys.stderr,
             flush=True,
         )
@@ -476,13 +536,20 @@ def format_report_sections(result: dict) -> list:
 
     ticker     = result.get("ticker", "")
     trade_date = result.get("trade_date", "")
+    mode       = result.get("mode", "full")
     ta         = result.get("ta_response", {})
     sep        = "=" * 22
 
-    return [
+    header_lines = [f"[{ticker}] TradingAgents Research", f"Date: {trade_date}"]
+    if mode == "fast":
+        header_lines.append(
+            "[FAST MODE — market + fundamentals analysts only; "
+            "news/sentiment not consulted]"
+        )
+
+    sections = [
         "\n".join([
-            f"[{ticker}] TradingAgents Research",
-            f"Date: {trade_date}",
+            *header_lines,
             "",
             sep, "1. FINAL DECISION", sep, "",
             _s(ta, "final_trade_decision"),
@@ -494,10 +561,13 @@ def format_report_sections(result: dict) -> list:
             sep, "5. ANALYST REPORTS", sep, "",
             "--- Market Report ---", "", _s(ta, "market_report"),
         ]),
-        "\n".join(["--- Sentiment Report ---", "", _s(ta, "sentiment_report")]),
-        "\n".join(["--- News Report ---", "", _s(ta, "news_report")]),
-        "\n".join(["--- Fundamentals Report ---", "", _s(ta, "fundamentals_report")]),
     ]
+    # Fast mode skips the analysts it never ran instead of printing "(no data)".
+    if mode != "fast":
+        sections.append("\n".join(["--- Sentiment Report ---", "", _s(ta, "sentiment_report")]))
+        sections.append("\n".join(["--- News Report ---", "", _s(ta, "news_report")]))
+    sections.append("\n".join(["--- Fundamentals Report ---", "", _s(ta, "fundamentals_report")]))
+    return sections
 
 
 def format_full_report(result: dict) -> str:
@@ -507,30 +577,45 @@ def format_full_report(result: dict) -> str:
 
 # -- Delivery pipeline ---------------------------------------------------------
 
-def _report_txt_path(ticker: str, trade_date: str) -> str:
-    return os.path.join(CACHE_DIR, ticker, f"{trade_date}-report.txt")
+def _report_txt_path(ticker: str, trade_date: str, mode: str = "full") -> str:
+    return os.path.join(CACHE_DIR, ticker,
+                        f"{trade_date}{_mode_suffix(mode)}-report.txt")
 
 
-def run_and_report(ticker: str, resend: bool = False) -> str:
+def run_and_report(ticker: str, resend: bool = False, mode: str = "full") -> str:
     """Run TA (or load from cache with resend=True), then print the report.
 
     Returns a status line (DONE:/FAILED:) followed by the full report body.
     The Hermes agent reads it from stdout and delivers it over its own
     reply channel.
     """
+    if mode not in VALID_MODES:
+        return f"FAILED: Unknown research mode {mode!r} (expected one of {VALID_MODES})."
     ticker = ticker.upper()
     trade_date = date.today().isoformat()
 
     if resend:
-        result = _load_cached_result(ticker, trade_date)
+        result = _load_cached_result(ticker, trade_date, mode)
         if not result:
-            cache_path = os.path.join(CACHE_DIR, ticker, f"{trade_date}-result.json")
+            cache_path = os.path.join(
+                CACHE_DIR, ticker,
+                f"{trade_date}{_mode_suffix(mode)}-result.json")
+            # If the OTHER mode has a cached report for today, say so — the run
+            # was probably launched in that mode. Only hint when the file really
+            # exists, so we never send the caller on a second useless probe.
+            other = "fast" if mode == "full" else "full"
+            other_path = os.path.join(
+                CACHE_DIR, ticker,
+                f"{trade_date}{_mode_suffix(other)}-result.json")
+            hint = (f" A {other}-mode result DOES exist at {other_path} — "
+                    f"retry with mode={other!r}." if os.path.exists(other_path) else "")
             return (
-                f"FAILED: No cached result found for {ticker} on {trade_date}. "
-                f"Expected at: {cache_path}. Run without --resend first."
+                f"FAILED: No cached {mode}-mode result found for {ticker} on "
+                f"{trade_date}. Expected at: {cache_path}. "
+                f"Run without --resend first.{hint}"
             )
     else:
-        result = call_trading_agents_api(ticker)
+        result = call_trading_agents_api(ticker, mode)
 
     sections = format_report_sections(result)
 
@@ -538,7 +623,7 @@ def run_and_report(ticker: str, resend: bool = False) -> str:
         return f"FAILED: {sections[0][:300]}"
 
     report = "\n\n".join(sections)
-    report_path = _report_txt_path(ticker, trade_date)
+    report_path = _report_txt_path(ticker, trade_date, mode)
     try:
         os.makedirs(os.path.dirname(report_path), exist_ok=True)
         with open(report_path, "w", encoding="utf-8") as f:
@@ -546,43 +631,53 @@ def run_and_report(ticker: str, resend: bool = False) -> str:
     except Exception:
         pass  # report-file write failure is non-fatal; stdout still carries it
 
+    mode_note = " [FAST MODE]" if mode == "fast" else ""
     return (
-        f"DONE: {ticker} research complete "
+        f"DONE: {ticker} research complete{mode_note} "
         f"(full report below; also saved to {report_path}).\n\n{report}"
     )
 
 
-def run_in_background(ticker: str) -> str:
+def run_in_background(ticker: str, mode: str = "full") -> str:
     """Launch TA research as a detached background process. Returns immediately.
 
-    The background process calls run_and_report(); when finished
-    (~15-20 minutes) the result is cached under {CACHE_DIR}/<TICKER>/ and can
-    be retrieved with --resend (prints the full report to stdout).
+    The background process calls run_and_report(); when finished (~9 min full,
+    ~3-5 min fast) the result is cached under {CACHE_DIR}/<TICKER>/ and can
+    be retrieved with --resend [--fast] (prints the full report to stdout).
 
     Returns a STARTED: status line (or FAILED: if the process could not be launched).
     """
+    if mode not in VALID_MODES:
+        return f"FAILED: Unknown research mode {mode!r} (expected one of {VALID_MODES})."
     ticker = ticker.upper()
     trade_date = date.today().isoformat()
     log_dir = os.environ.get("TA_LOG_DIR", os.path.expanduser("~/.tradingagents/logs"))
     os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, f"{ticker}-{trade_date}.log")
+    log_path = os.path.join(log_dir, f"{ticker}-{trade_date}{_mode_suffix(mode)}.log")
+
+    eta = "~3-5 minutes" if mode == "fast" else "~9 minutes"
+    resend_cmd = f"python3 {SCRIPT_PATH} {ticker} --resend" + (
+        " --fast" if mode == "fast" else "")
 
     try:
         # sys.executable = hermes venv python3 (#4)
         # --background tells __main__ to call run_and_report() directly (no re-spawn)
         # start_new_session=True detaches from parent so execute_code can complete
+        argv = [sys.executable, SCRIPT_PATH, ticker, "--background"]
+        if mode == "fast":
+            argv.append("--fast")
         with open(log_path, "w") as log_fh:
             proc = subprocess.Popen(
-                [sys.executable, SCRIPT_PATH, ticker, "--background"],
+                argv,
                 stdout=log_fh,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
             )
         return (
-            f"STARTED: {ticker} research launched in background (PID {proc.pid}). "
-            f"It takes ~15-20 minutes; the report will be cached at "
-            f"{_report_txt_path(ticker, trade_date)}. "
-            f"Retrieve it when ready with: python3 {SCRIPT_PATH} {ticker} --resend "
+            f"STARTED: {ticker} {mode}-mode research launched in background "
+            f"(PID {proc.pid}). It takes {eta}; the report will be cached at "
+            f"{_report_txt_path(ticker, trade_date, mode)}. "
+            f"Retrieve it when ready with: {resend_cmd} "
             f"(prints the full report to stdout). Log: {log_path}."
         )
     except Exception as e:
@@ -595,13 +690,14 @@ if __name__ == "__main__":
     args         = sys.argv[1:]
     is_background = "--background" in args
     is_resend     = "--resend" in args
+    mode          = "fast" if "--fast" in args else "full"
     positional    = [a for a in args if not a.startswith("--")]
     ticker        = positional[0].upper() if positional else "NVDA"
 
     if is_background or is_resend:
         # Called by the detached subprocess (output goes to the log file), or
         # by the agent retrieving a finished/cached report to stdout.
-        print(run_and_report(ticker, resend=is_resend))
+        print(run_and_report(ticker, resend=is_resend, mode=mode))
     else:
         # Interactive / cron call: launch in background and return immediately.
-        print(run_in_background(ticker))
+        print(run_in_background(ticker, mode))

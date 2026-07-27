@@ -1,10 +1,10 @@
 {
   "name": "aisa-cio",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Responds in English.",
   "author": {
     "name": "AIsa",
-    "url": "https://console.aisa.one/financial-agent"
+    "url": "https://aisa.one/agents/aisa-cio"
   },
   "keywords": [
     "investing",
@@ -21,14 +21,17 @@
     "shortDescription": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Responds in English.",
     "developerName": "AIsa",
     "category": "Productivity",
-    "websiteURL": "https://console.aisa.one/financial-agent",
+    "websiteURL": "https://aisa.one/agents/aisa-cio",
     "privacyPolicyURL": "https://aisa.one/privacy",
     "termsOfServiceURL": "https://aisa.one/TOS",
     "defaultPrompt": [
       "portfolio",
+      "portfolio health",
+      "portfolio update",
       "scan AAPL",
       "market brief US",
-      "ta NVDA"
+      "fast-research NVDA",
+      "filings NVDA"
     ]
   }
 }
