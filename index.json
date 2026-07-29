@@ -5,41 +5,8 @@
       "name": "AIsa CIO",
       "description": "AI Chief Investment Officer — live multi-market portfolio valuation, deep stock research, technical scans, policy-driven allocation decisions. Responds in English.",
       "repo": "AIsa-team/agent-index",
-      "latest": "1.6.4",
+      "latest": "1.6.5",
       "versions": {
-        "1.6.0": {
-          "targets": {
-            "hermes": {
-              "url": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/aisa-cio-hermes-v1.6.0.tar.gz",
-              "sha256": "f668bd08123c5bf853a5e85fb088b543951484ec1bbb62ccbc544b5b31d7d9cc",
-              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/INSTALL-hermes.md",
-              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/install-hermes.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/guide-prompt-hermes.txt",
-              "e2bTemplate": "hermes-aisa-cio-1-6-0"
-            },
-            "openclaw": {
-              "url": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/aisa-cio-openclaw-v1.6.0.tar.gz",
-              "sha256": "4486dea0a7f227c28d2684f2182f32f7d3ff065f3548443d08ae2ad3c4bfbc77",
-              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/INSTALL-openclaw.md",
-              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/install-openclaw.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/guide-prompt-openclaw.txt"
-            },
-            "claude-plugin": {
-              "repo": "AIsa-team/agent-index",
-              "tag": "aisa-cio-v1.6.0",
-              "commit": "3c0b628a22a2533b1e68977b6d9fe44afc714b63",
-              "path": "plugins/aisa-cio",
-              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/INSTALL-claudecode.md"
-            },
-            "codex-plugin": {
-              "repo": "AIsa-team/agent-index",
-              "tag": "aisa-cio-v1.6.0",
-              "commit": "3c0b628a22a2533b1e68977b6d9fe44afc714b63",
-              "path": "plugins/aisa-cio-codex",
-              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.0/INSTALL-codex.md"
-            }
-          }
-        },
         "1.6.1": {
           "targets": {
             "hermes": {
@@ -169,6 +136,38 @@
               "commit": "cb7afed98bf1fbe27b551841275f391b49b6c9f9",
               "path": "plugins/aisa-cio-codex",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.4/INSTALL-codex.md"
+            }
+          }
+        },
+        "1.6.5": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/aisa-cio-hermes-v1.6.5.tar.gz",
+              "sha256": "72e53f218ea9123e90700f482022fae17806fa7788948f78469a4cbbb679fd81",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/INSTALL-hermes.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/install-hermes.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/guide-prompt-hermes.txt"
+            },
+            "openclaw": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/aisa-cio-openclaw-v1.6.5.tar.gz",
+              "sha256": "5081ed156fbfa7d7f36c78dfbb5fe7361b2e1e063b7ff16fdaffe06f69f46d17",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/INSTALL-openclaw.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/install-openclaw.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/guide-prompt-openclaw.txt"
+            },
+            "claude-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "aisa-cio-v1.6.5",
+              "commit": "7fb6fcb7e38125f3b183b24e54d83acdf697b1ea",
+              "path": "plugins/aisa-cio",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/INSTALL-claudecode.md"
+            },
+            "codex-plugin": {
+              "repo": "AIsa-team/agent-index",
+              "tag": "aisa-cio-v1.6.5",
+              "commit": "7fb6fcb7e38125f3b183b24e54d83acdf697b1ea",
+              "path": "plugins/aisa-cio-codex",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cio-v1.6.5/INSTALL-codex.md"
             }
           }
         }
