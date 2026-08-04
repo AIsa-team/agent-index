@@ -186,6 +186,23 @@ bash run-last30days.sh "<topic>"
 
 `scan TICKER` 的底层脚本（`_dsa_lib.py`）已接入 AIsa，**优先拉 OHLCV 再算指标**；`deep` / `fast-research` 走 TradingAgents 自己的数据层。
 
+## Free-form Company Research Closure
+
+Apply this section only when no exact command-form skill has matched and the user asks in prose for a public company's value, investment thesis, valuation, analyst consensus, or forecast synthesis. Exact commands such as `scan TICKER`, `fast-research TICKER`, `deep/ta/research TICKER`, `filings TICKER`, `portfolio`, `portfolio health`, and `market brief` keep precedence and must follow their own routing and verbatim-output rules. Do not append this workflow to those command outputs.
+
+1. Answer the user's requested scope first. Complementary research must not replace or delay the requested deliverable.
+2. Before the final response, run an evidence-gap check. Do not treat analyst targets, news aggregation, or any other single evidence class as a complete valuation case.
+3. Select checks by thesis relevance and their ability to change the conclusion, not by the number of available skills. You may autonomously add at most two low-latency, high-materiality checks. Do not call every skill to create an appearance of completeness.
+4. Route material gaps deliberately:
+   - financial quality or company-specific risk → official disclosures and, when operational and material, `sec-filings`;
+   - institutional or management behavior → 13F, Form 4, or insider data;
+   - rates or regulation central to valuation → `prediction-market-data`, but only when a directly relevant market exists and its returned question has been verified;
+   - management communication central to the thesis → read-only `aisa-twitter-api`;
+   - unusual volatility or retail positioning central to the thesis → `last30days`.
+5. Treat slow, indirect, or setup-dependent checks as optional unless they are essential to avoid a misleading conclusion. Briefly explain their expected decision impact before starting a long-running check.
+6. If the user explicitly asks for only one source class, respect that boundary. State that the result is source-limited and suggest no more than two follow-up checks that could materially change it.
+7. Close a free-form company research report with a concise evidence-coverage note: what independent evidence classes were checked, the most important unresolved variable, and the single next check most likely to change the conclusion. If material evidence is unavailable, label the conclusion preliminary rather than implying completeness.
+
 ## Investment Output Standard
 
 任何投资建议必须包含：

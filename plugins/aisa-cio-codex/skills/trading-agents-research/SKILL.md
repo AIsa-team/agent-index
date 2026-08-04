@@ -1,8 +1,6 @@
 ---
 name: trading-agents-research
 description: "AUTO-INVOKE on the command forms `deep TICKER` / `ta TICKER` / `research TICKER` / `研究 TICKER` (full mode) and `fast-research TICKER` / `快研 TICKER` (fast mode) — a trigger word plus a ticker symbol. Runs the real TradingAgents multi-agent framework (analysts + debate + risk + PM) for a single stock ticker. NOT for free-form 'deep research' prose without a ticker — that is `multi-source-search`'s job."
-references:
-  - scripts/call_trading_agents.py
 ---
 
 > **Required credentials** — scripts resolve these as: env var → `~/.aisa/credentials` (KEY=VALUE lines):
@@ -28,7 +26,9 @@ Calls the **real** TradingAgents multi-agent framework. Two modes:
 
 Fast mode trades the News and Sentiment analyst branches for speed; its report
 carries an explicit `[FAST MODE …]` header. For news/sentiment coverage use
-`scan [ticker]` or `marketpulse`/`multi-source-search` alongside it.
+`marketpulse`/`multi-source-search` for news and `last30days`/`aisa-twitter-api`
+for social sentiment alongside it. `scan [ticker]` is technical-only and must
+not be described as news or sentiment coverage.
 
 The script runs in the **background** and caches the finished report on disk
 (`~/.tradingagents/results/<TICKER>/<date>-report.txt` for full mode,
