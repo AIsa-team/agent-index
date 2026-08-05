@@ -42,10 +42,11 @@ description: "AUTO-INVOKE for fast technical scans and market briefs. Triggers: 
 
 - **Exact `portfolio`** → use the existing `portfolio-report` skill (live P&L). NOT this skill.
 - **`portfolio health` / `持仓健康`** → THIS skill (`dsa_port_health.py`).
-- **`deep TICKER` / `ta TICKER` / `research TICKER` / `研究 TICKER`** → use the existing `trading-agents-research` skill (~9 min full multi-agent analysis). NOT this skill.
-- **`fast-research TICKER` / `快研 TICKER`** → also `trading-agents-research`, fast mode (~3–5 min, market+fundamentals analysts only). NOT this skill.
+- **`research TICKER` / `研究 TICKER`** → `trading-agents-research` skill, quick tier (~1 min single-model quick take). NOT this skill.
+- **`deep-research TICKER` / `深度研究 TICKER`** → `trading-agents-research`, deep tier (~3 min, market+fundamentals multi-agent). NOT this skill.
+- **`full-report TICKER` / `全量报告 TICKER`** → `trading-agents-research`, full tier (~9 min complete 4-analyst report). NOT this skill.
 - **`scan TICKER` / `quick TICKER`** → THIS skill (~1–3 min light technical scan).
-- The three are complementary: `scan` for daily monitoring, `fast-research` for a quick multi-agent read, `deep` for high-conviction deep dives.
+- Complementary: `scan` for daily technical monitoring (pure technicals, no LLM thesis), `research` for a fast opinionated read, `deep-research` for a quick multi-agent read, `full-report` for high-conviction deep dives.
 
 ## How to invoke
 
