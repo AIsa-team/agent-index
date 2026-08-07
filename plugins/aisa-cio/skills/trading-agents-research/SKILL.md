@@ -1,6 +1,6 @@
 ---
 name: trading-agents-research
-description: "AUTO-INVOKE on the command forms `research TICKER` / `研究 TICKER` (quick tier, ~1 min), `deep-research TICKER` / `深度研究 TICKER` (deep tier, ~3 min) and `full-report TICKER` / `全量报告 TICKER` (full tier, ~9 min) — a trigger word plus a ticker symbol. Quick is a single-model quick take; deep and full run the real TradingAgents multi-agent framework. Legacy triggers `ta` / `deep` / `fast-research` / `快研` are RETIRED — on seeing them, suggest the new commands instead of running. NOT for free-form 'deep research' prose without a ticker — that is `multi-source-search`'s job."
+description: "AUTO-INVOKE on the command forms `research TICKER` / `研究 TICKER` (quick tier, ~1 min), `deep-research TICKER` / `深度研究 TICKER` (deep tier, ~3 min) and `full-report TICKER` / `全量报告 TICKER` (full tier, ~9 min) — a trigger word plus a ticker symbol. Quick is a single-model quick take; deep and full run the real TradingAgents multi-agent framework. Legacy triggers `ta` / `deep` / `fast-research` / `快研` are RETIRED — on seeing them, use the command-specific replacement guidance below instead of running. NOT for free-form 'deep research' prose without a ticker — that is `multi-source-search`'s job."
 ---
 
 > **Required credentials** — scripts resolve these as: env var → `~/.aisa/credentials` (KEY=VALUE lines):
@@ -27,9 +27,12 @@ deeper tier than the user asked for:
 | **full** | `full-report [ticker]`, `全量报告 [ticker]`, `完整报告 [ticker]` | real TradingAgents: all 4 analysts (market/sentiment/news/fundamentals) + debate + risk + PM; hybrid pro+flash | ~9 min | background + resend |
 
 **Retired triggers**: `ta`, `deep`, `research`-as-full, `fast-research`, `快研`.
-If the user types one of these, do NOT launch anything — reply with a one-line
-mapping: quick take → `research T`, ~3 min multi-agent → `deep-research T`,
-complete report → `full-report T`.
+If the user types one of these, do NOT launch anything. Reply with the
+closest command-specific replacement:
+
+- `fast-research T` / `快研 T` → `deep-research T` (same intent: reduced multi-agent research, ~3 min).
+- `ta T` / `deep T` → ask whether they want `deep-research T` (~3 min) or `full-report T` (~9 min complete investment research report); if they clearly want the old complete TA run, point to `full-report T`.
+- `research`-as-full → `full-report T`; plain `research T` is now quick only.
 
 Neither quick nor deep consults news/sentiment. For that coverage use
 `marketpulse`/`multi-source-search` for news and `last30days`/`aisa-twitter-api`
@@ -123,16 +126,18 @@ print(status)
 
 Use `execute_code` with `timeout=120` for this call (it only reads cache, no research run).
 
-- `DONE:` + **deep mode** → the BRIEF report follows (decision + trading plan
-  + full-report tip). Deliver it verbatim — do not rewrite or summarise. The
+- `DONE:` + **deep mode** → the Research Brief follows (investment view, key
+  evidence, key risks, action plan, what to watch next, and the full-report
+  tip). Deliver it verbatim — do not rewrite or summarise. The
   complete deep output (debate, risk, analyst reports) is already on disk; if
   the user asks for it, call `run_and_report(<TICKER>, resend=True,
   mode="deep", full_text=True)`.
-- `DONE:` + **full mode** → the complete report follows. Deliver sections
-  **1. FINAL DECISION** and **2. TRADING PLAN** verbatim first; then offer the
-  remaining sections (debate, risk, analyst reports) on request or deliver
-  them in follow-up messages. Do not rewrite or summarise the decision/plan
-  content itself.
+- `DONE:` + **full mode** → the Full Investment Research Report follows
+  (executive brief, investment view, evidence, bull/bear/neutral view, risks,
+  trading and portfolio action plan, analyst summaries, what to watch next, and
+  no standalone source section). Deliver it verbatim — do not rewrite,
+  summarise, or split it into "remaining sections." The raw TradingAgents
+  sections are retained only as an internal fallback if report synthesis fails.
 - `FAILED: No cached ... result found` → research is still running (or was
   never started, or was launched in another tier — the message names any tier
   that DOES have today's result). Tell the user to wait, or launch a fresh run

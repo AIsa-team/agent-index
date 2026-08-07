@@ -23,9 +23,10 @@ chat-platform API calls.
 
 Output contract:
   quick        → prints the quick report directly (synchronous)
-  deep resend  → BRIEF report by default (decision + trading plan + tip);
+  deep resend  → Research Brief by default (edited investment view, evidence,
+                 risks, action plan, watch list);
                  pass full_text=True / --full-text for the whole deep output
-  full resend  → complete report with readable debate/risk formatting
+  full resend  → edited Full Investment Research Report by default
 
 Optimisations (2026-04-26):
   #4  python3: background subprocess uses sys.executable (hermes venv python3)
@@ -42,13 +43,14 @@ Three-tier redesign (2026-08-05, RY):
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import urllib.error
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 AISA_API_KEY_ENV  = "AISA_API_KEY"
 GEMINI_API_KEY_ENV   = "GEMINI_API_KEY"
@@ -185,6 +187,7 @@ PROVIDER_CHAIN = ("deepseek", "deepseek_flash")
 
 RUNNER_TEMPLATE = """\
 import sys, os, json
+from datetime import datetime, timezone
 # TA_DIR is legacy (source-checkout installs); with the AgentSpec `ta` venv the
 # tradingagents package is pip-installed and importable without path insertion.
 if {ta_dir!r}:
@@ -220,9 +223,12 @@ result = {{
     "success": True,
     "ticker": {ticker!r},
     "trade_date": {trade_date!r},
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
     "mode": {mode!r},
     "provider_used": {llm_provider!r},
     "model_used": {deep_think_llm!r},
+    "data_vendors": config.get("data_vendors", {{}}),
+    "tool_vendors": config.get("tool_vendors", {{}}),
     "decision": _str(decision),
     "ta_response": {{
         "final_trade_decision":    _str(final_state.get("final_trade_decision")),
@@ -240,6 +246,7 @@ print("__TA_RESULT__:" + json.dumps(result, ensure_ascii=False))
 """
 
 VALID_MODES = ("quick", "deep", "full")
+RENDERED_REPORT_VERSION = "v1"
 
 # Deep tier: official TradingAgentsGraph constructor arg — drop the News and
 # Sentiment analyst branches (technicals + fundamentals form the decision
@@ -256,6 +263,116 @@ QUICK_TIP = (
     "Tip: for multi-agent research run: deep-research {ticker} (~3 min, "
     "market+fundamentals) or full-report {ticker} (~9 min, complete report)."
 )
+RESEARCH_DISCLAIMER = (
+    "For informational purposes only. This is not financial advice or a "
+    "recommendation to buy, sell, or hold any security. Markets move quickly; "
+    "verify key data before making investment decisions."
+)
+
+_DEEP_BRIEF_SYSTEM_PROMPT = """\
+You are the research editor for an AI Chief Investment Officer. Convert raw
+TradingAgents outputs into a concise user-facing Research Brief.
+
+Use ONLY the facts and numbers in the provided raw sections. Do not invent
+prices, sources, catalysts, dates, or analyst views. Preserve important numeric
+levels exactly. Hide internal agent transcript structure: do not expose raw
+bull/bear/neutral debate logs or JSON-like fields.
+
+Optimize for decision usefulness, not length. Avoid repeating the same point in
+multiple sections. If a detail is missing, say "Not available in this run."
+Keep the entire brief under 1,100 words, but never omit a required section.
+
+Return Markdown only, in exactly this structure:
+
+## 1. Investment View
+- Rating:
+- Time Horizon:
+- Core View:
+  - 2 to 3 short sentences.
+  - Do not write one long paragraph.
+- Confidence:
+
+## 2. Key Evidence
+- 3 to 5 bullets. Each bullet must explain why the evidence matters.
+
+## 3. Key Risks
+- 3 to 5 bullets. Each bullet must explain what would change the view.
+
+## 4. Action Plan
+Use a literal Markdown table with pipe delimiters. Do not write "Item:" /
+"Plan:" blocks.
+
+| Item | Plan |
+| --- | --- |
+| Immediate Action | ... |
+| Add Plan | ... |
+| Exit / Stop Signal | ... |
+| Portfolio Context | ... |
+
+## 5. What to Watch Next
+- 3 to 5 bullets with concrete metrics, dates, levels, or events where available.
+"""
+
+_FULL_REPORT_SYSTEM_PROMPT = """\
+You are the research editor for an AI Chief Investment Officer. Convert raw
+TradingAgents outputs into a polished Full Investment Research Report.
+
+Use ONLY the facts and numbers in the provided raw sections. Do not invent
+prices, sources, catalysts, dates, or analyst views. Preserve important numeric
+levels exactly. Hide internal agent transcript structure: do not expose raw
+bull/bear/neutral debate logs, message history, or JSON-like fields.
+
+The report should be more complete than a brief, but it must read like an
+edited investment memo, not a process log. Remove repetition across sections.
+Prefer dense bullets and short paragraphs. If a detail is missing, say
+"Not available in this run." Keep the report under 1,800 words, but never omit
+a required section.
+
+Return Markdown only, in exactly this structure:
+
+## 1. Executive Brief
+- 3 to 5 bullets covering the decision, strongest evidence, biggest risk,
+  and near-term action.
+
+## 2. Investment View
+- Rating:
+- Time Horizon:
+- Core Thesis:
+  - 2 to 4 short bullets.
+- Confidence:
+
+## 3. Key Evidence
+- 4 to 6 bullets. Each bullet must explain why the evidence matters.
+
+## 4. Bull / Bear / Neutral View
+- Bull Case:
+- Bear Case:
+- Neutral / Timing View:
+- CIO Takeaway:
+
+## 5. Key Risks
+- 4 to 6 bullets. Each bullet must explain what would change the view.
+
+## 6. Trading & Portfolio Action Plan
+Use a literal Markdown table with pipe delimiters. Do not write "Item:" /
+"Plan:" blocks.
+
+| Item | Plan |
+| --- | --- |
+| Immediate Action | ... |
+| Add Plan | ... |
+| Exit / Stop Signal | ... |
+| Portfolio Context | ... |
+
+## 7. Analyst Reports Summary
+- Market / Technical:
+- Fundamentals:
+- News / Catalysts:
+- Sentiment:
+
+## 8. What to Watch Next
+- 4 to 6 bullets with concrete metrics, dates, levels, or events where available.
+"""
 
 def _normalize_mode(mode: str) -> str:
     """Map legacy names onto the three-tier scheme; raise on unknowns."""
@@ -405,6 +522,20 @@ def _load_cached_result(ticker: str, trade_date: str,
             pass
     return None
 
+def _load_text_file(path: str) -> str | None:
+    try:
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                return f.read().strip()
+    except Exception:
+        pass
+    return None
+
+def _write_text_file(path: str, text: str) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
 # -- Quick tier (single-pass, no TradingAgents) --------------------------------
 
 def _run_json_cmd(argv: list, timeout: int = 25):
@@ -522,7 +653,8 @@ def _compute_indicators(closes: list, volumes: list) -> dict:
         "sessions": len(closes),
     }
 
-def _aisa_chat(system: str, user: str, timeout: int = 60) -> str:
+def _aisa_chat(system: str, user: str, timeout: int = 60,
+               max_tokens: int = 700) -> str:
     """One chat call to the AISA gateway (OpenAI-compatible). Returns the
     assistant text; raises RuntimeError with a short reason on failure."""
     api_key = _read_env_value(AISA_API_KEY_ENV)
@@ -534,7 +666,7 @@ def _aisa_chat(system: str, user: str, timeout: int = 60) -> str:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        "max_tokens": 700,
+        "max_tokens": max_tokens,
     }).encode("utf-8")
     req = urllib.request.Request(
         AISA_CHAT_URL,
@@ -639,6 +771,7 @@ def run_quick_research(ticker: str) -> str:
         "success": True,
         "ticker": ticker,
         "trade_date": trade_date,
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "mode": "quick",
         "provider_used": "aisa-gateway",
         "model_used": QUICK_MODEL,
@@ -856,6 +989,208 @@ def _header_lines(result: dict) -> list:
         )
     return lines
 
+def _data_timestamp(result: dict) -> str:
+    raw = result.get("generated_at_utc")
+    if not raw:
+        return f"{result.get('trade_date', '')} (run date)"
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        local = dt.astimezone()
+        return local.strftime("%Y-%m-%d %H:%M %Z")
+    except Exception:
+        return raw
+
+def _vendor_label(vendor: str) -> str:
+    vendor = str(vendor or "").strip()
+    labels = {
+        "yfinance": "Yahoo Finance",
+        "alpha_vantage": "Alpha Vantage",
+        "fred": "FRED",
+        "polymarket": "Polymarket",
+    }
+    return labels.get(vendor, vendor or "Not available")
+
+def _source_for(result: dict, category: str, default: str) -> str:
+    vendors = result.get("data_vendors") or {}
+    if isinstance(vendors, dict):
+        return _vendor_label(vendors.get(category, default))
+    return _vendor_label(default)
+
+def _clip(value: str, limit: int = 3000) -> str:
+    value = str(value or "").strip()
+    if len(value) <= limit:
+        return value
+    return value[:limit].rstrip() + "\n[truncated for brief synthesis]"
+
+def _deep_brief_header(result: dict) -> str:
+    ticker = result.get("ticker", "")
+    trade_date = result.get("trade_date", "")
+    return "\n".join([
+        f"# {ticker} Research Brief",
+        f"*{RESEARCH_DISCLAIMER}*",
+        "",
+        f"Date: {trade_date}",
+        f"Data timestamp: {_data_timestamp(result)}",
+        "Mode: Deep Research (market + fundamentals analysts; news/sentiment not included)",
+    ])
+
+def _full_report_header(result: dict) -> str:
+    ticker = result.get("ticker", "")
+    trade_date = result.get("trade_date", "")
+    return "\n".join([
+        f"# {ticker} Full Investment Research Report",
+        f"*{RESEARCH_DISCLAIMER}*",
+        "",
+        f"Date: {trade_date}",
+        f"Data timestamp: {_data_timestamp(result)}",
+        "Mode: Full Report (market + sentiment + news + fundamentals analysts; "
+        "debate + risk review included)",
+    ])
+
+def _fallback_deep_brief(result: dict) -> str:
+    """Deterministic fallback if the editorial LLM pass is unavailable."""
+    ta = result.get("ta_response", {})
+    return "\n\n".join([
+        "## 1. Investment View\n\n" + _s(ta, "final_trade_decision"),
+        "## 2. Key Evidence\n\n"
+        + "Condensed evidence synthesis was unavailable. Relevant raw inputs:\n\n"
+        + "--- Market ---\n\n" + _clip(_s(ta, "market_report"), 1600)
+        + "\n\n--- Fundamentals ---\n\n" + _clip(_s(ta, "fundamentals_report"), 1600),
+        "## 3. Key Risks\n\n" + _clip(_risk_debate_readable(ta.get("risk_debate_state", "")), 1800),
+        "## 4. Action Plan\n\n" + _s(ta, "trader_investment_plan"),
+        "## 5. What to Watch Next\n\nNot available in this run.",
+    ])
+
+def _fallback_full_report(result: dict) -> str:
+    """Deterministic fallback if the full-report editorial pass is unavailable."""
+    return "\n\n".join(format_report_sections(result))
+
+def _md_table_escape(value: str) -> str:
+    return " ".join(str(value or "").replace("|", "\\|").split())
+
+def _action_plan_table_from_blocks(section: str) -> str | None:
+    pairs = re.findall(
+        r"Item:\s*(.*?)\s*Plan:\s*(.*?)(?=(?:\n\s*(?:[-─]{3,}|Item:|## )|$))",
+        section,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not pairs:
+        return None
+    rows = []
+    for item, plan in pairs:
+        item = _md_table_escape(item)
+        plan = _md_table_escape(plan)
+        if item and plan:
+            rows.append((item, plan))
+    if not rows:
+        return None
+    lines = ["| Item | Plan |", "| --- | --- |"]
+    lines.extend(f"| {item} | {plan} |" for item, plan in rows)
+    return "\n".join(lines)
+
+def _normalize_action_plan_table(text: str) -> str:
+    start_marker = "## 4. Action Plan"
+    end_marker = "## 5. What to Watch Next"
+    start = text.find(start_marker)
+    end = text.find(end_marker)
+    if start == -1 or end == -1 or end <= start:
+        return text
+
+    body_start = start + len(start_marker)
+    section = text[body_start:end].strip()
+    if "| Item | Plan |" in section:
+        return text
+
+    table = _action_plan_table_from_blocks(section)
+    if table is None:
+        return text
+    return text[:body_start] + "\n\n" + table + "\n\n" + text[end:]
+
+def _normalize_full_action_plan_table(text: str) -> str:
+    start_marker = "## 6. Trading & Portfolio Action Plan"
+    end_marker = "## 7. Analyst Reports Summary"
+    start = text.find(start_marker)
+    end = text.find(end_marker)
+    if start == -1 or end == -1 or end <= start:
+        return text
+
+    body_start = start + len(start_marker)
+    section = text[body_start:end].strip()
+    if "| Item | Plan |" in section:
+        return text
+
+    table = _action_plan_table_from_blocks(section)
+    if table is None:
+        return text
+    return text[:body_start] + "\n\n" + table + "\n\n" + text[end:]
+
+def _deep_brief_is_complete(text: str) -> bool:
+    required = (
+        "## 1. Investment View",
+        "## 2. Key Evidence",
+        "## 3. Key Risks",
+        "## 4. Action Plan",
+        "## 5. What to Watch Next",
+    )
+    return all(marker in text for marker in required)
+
+def _full_report_is_complete(text: str) -> bool:
+    required = (
+        "## 1. Executive Brief",
+        "## 2. Investment View",
+        "## 3. Key Evidence",
+        "## 4. Bull / Bear / Neutral View",
+        "## 5. Key Risks",
+        "## 6. Trading & Portfolio Action Plan",
+        "## 7. Analyst Reports Summary",
+        "## 8. What to Watch Next",
+    )
+    return all(marker in text for marker in required)
+
+def _synthesize_deep_brief(result: dict) -> str:
+    ticker = result.get("ticker", "")
+    trade_date = result.get("trade_date", "")
+    ta = result.get("ta_response", {})
+    user_msg = "\n\n".join([
+        f"Ticker: {ticker}",
+        f"Trade date: {trade_date}",
+        "Coverage: Deep Research runs market + fundamentals analysts only; "
+        "news and sentiment are not included.",
+        "RAW FINAL DECISION:\n" + _clip(_s(ta, "final_trade_decision"), 2600),
+        "RAW TRADING PLAN:\n" + _clip(_s(ta, "trader_investment_plan"), 2600),
+        "RAW MARKET REPORT:\n" + _clip(_s(ta, "market_report"), 2400),
+        "RAW FUNDAMENTALS REPORT:\n" + _clip(_s(ta, "fundamentals_report"), 2600),
+        "RAW INVESTMENT DEBATE SUMMARY:\n"
+        + _clip(_investment_debate_readable(ta.get("investment_debate_state", "")), 1800),
+        "RAW RISK ASSESSMENT:\n"
+        + _clip(_risk_debate_readable(ta.get("risk_debate_state", "")), 2200),
+    ])
+    return _aisa_chat(_DEEP_BRIEF_SYSTEM_PROMPT, user_msg,
+                      timeout=90, max_tokens=2400)
+
+def _synthesize_full_report(result: dict) -> str:
+    ticker = result.get("ticker", "")
+    trade_date = result.get("trade_date", "")
+    ta = result.get("ta_response", {})
+    user_msg = "\n\n".join([
+        f"Ticker: {ticker}",
+        f"Trade date: {trade_date}",
+        "Coverage: Full Report runs market, sentiment, news, and fundamentals "
+        "analysts, then includes investment debate and risk review.",
+        "RAW FINAL DECISION:\n" + _clip(_s(ta, "final_trade_decision"), 3200),
+        "RAW TRADING PLAN:\n" + _clip(_s(ta, "trader_investment_plan"), 3200),
+        "RAW INVESTMENT DEBATE SUMMARY:\n"
+        + _clip(_investment_debate_readable(ta.get("investment_debate_state", "")), 2800),
+        "RAW RISK ASSESSMENT:\n"
+        + _clip(_risk_debate_readable(ta.get("risk_debate_state", "")), 2800),
+        "RAW MARKET REPORT:\n" + _clip(_s(ta, "market_report"), 2600),
+        "RAW SENTIMENT REPORT:\n" + _clip(_s(ta, "sentiment_report"), 2200),
+        "RAW NEWS REPORT:\n" + _clip(_s(ta, "news_report"), 2200),
+        "RAW FUNDAMENTALS REPORT:\n" + _clip(_s(ta, "fundamentals_report"), 2800),
+    ])
+    return _aisa_chat(_FULL_REPORT_SYSTEM_PROMPT, user_msg,
+                      timeout=120, max_tokens=3600)
+
 def format_report_sections(result: dict) -> list:
     """Return the complete report as a list of section strings."""
     if not result.get("success"):
@@ -898,34 +1233,58 @@ def format_report_sections(result: dict) -> list:
     return sections
 
 def format_brief_report(result: dict) -> str:
-    """Deep-tier default output: decision + trading plan only (verbatim), plus
-    the full-report tip. Debate/risk/analyst sections stay in the cached
-    report.txt — they are on disk, not in the conversation context."""
+    """Deep-tier default output: edited Research Brief.
+
+    The complete deep output remains in cached report.txt for users who want the
+    raw TradingAgents sections. The conversation gets the concise, user-facing
+    brief instead of decision/plan plus internal debate transcripts.
+    """
     if not result.get("success"):
         return format_report_sections(result)[0]
     ticker = result.get("ticker", "")
-    ta     = result.get("ta_response", {})
-    sep    = "=" * 22
+    try:
+        body = _synthesize_deep_brief(result).strip()
+        if not _deep_brief_is_complete(body):
+            body = _fallback_deep_brief(result)
+    except RuntimeError:
+        body = _fallback_deep_brief(result)
+    body = _normalize_action_plan_table(body)
     return "\n\n".join([
-        "\n".join([
-            *_header_lines(result),
-            "",
-            sep, "1. FINAL DECISION", sep, "",
-            _s(ta, "final_trade_decision"),
-        ]),
-        "\n".join([sep, "2. TRADING PLAN", sep, "", _s(ta, "trader_investment_plan")]),
+        _deep_brief_header(result),
+        body,
         FULL_REPORT_TIP.format(ticker=ticker),
     ])
 
 def format_full_report(result: dict) -> str:
-    """Complete report as a single string."""
-    return "\n\n".join(format_report_sections(result))
+    """Full-tier default output: edited investment report.
+
+    The old section-by-section TradingAgents transcript remains the fallback, so
+    a synthesis failure never blocks delivery of the complete underlying result.
+    """
+    if not result.get("success"):
+        return format_report_sections(result)[0]
+    try:
+        body = _synthesize_full_report(result).strip()
+        if not _full_report_is_complete(body):
+            body = _fallback_full_report(result)
+    except RuntimeError:
+        body = _fallback_full_report(result)
+    body = _normalize_full_action_plan_table(body)
+    return "\n\n".join([
+        _full_report_header(result),
+        body,
+    ])
 
 # -- Delivery pipeline ---------------------------------------------------------
 
 def _report_txt_path(ticker: str, trade_date: str, mode: str = "full") -> str:
     return os.path.join(CACHE_DIR, ticker,
                         f"{trade_date}{_mode_suffix(mode)}-report.txt")
+
+def _rendered_report_path(ticker: str, trade_date: str,
+                          mode: str = "full") -> str:
+    return os.path.join(CACHE_DIR, ticker,
+                        f"{trade_date}{_mode_suffix(mode)}-rendered-{RENDERED_REPORT_VERSION}.txt")
 
 def run_and_report(ticker: str, resend: bool = False, mode: str = "full",
                    full_text: bool = False) -> str:
@@ -947,6 +1306,12 @@ def run_and_report(ticker: str, resend: bool = False, mode: str = "full",
         return run_quick_research(ticker)
 
     if resend:
+        if mode in ("deep", "full") and not full_text:
+            rendered = _load_text_file(_rendered_report_path(ticker, trade_date, mode))
+            if rendered:
+                label = "deep research" if mode == "deep" else "research"
+                return f"DONE: {ticker} {label} complete (cached).\n\n{rendered}"
+
         result = _load_cached_result(ticker, trade_date, mode)
         if not result:
             cache_path = os.path.join(
@@ -985,24 +1350,35 @@ def run_and_report(ticker: str, resend: bool = False, mode: str = "full",
                     "text; launch a fresh `research` run.")
         return f"DONE: {ticker} quick research (cached).\n\n{report}"
 
-    full_report = format_full_report(result)
     report_path = _report_txt_path(ticker, trade_date, mode)
+    rendered_path = _rendered_report_path(ticker, trade_date, mode)
+    complete_report = (
+        "\n\n".join(format_report_sections(result))
+        if mode == "deep" else format_full_report(result)
+    )
     try:
-        os.makedirs(os.path.dirname(report_path), exist_ok=True)
-        with open(report_path, "w", encoding="utf-8") as f:
-            f.write(full_report)
+        _write_text_file(report_path, complete_report)
     except Exception:
         pass  # report-file write failure is non-fatal; stdout still carries it
 
     if mode == "deep" and not full_text:
         body = format_brief_report(result)
+        try:
+            _write_text_file(rendered_path, body)
+        except Exception:
+            pass
         return (
             f"DONE: {ticker} deep research complete (brief below; complete "
             f"deep output saved to {report_path}).\n\n{body}"
         )
+    if mode == "full":
+        try:
+            _write_text_file(rendered_path, complete_report)
+        except Exception:
+            pass
     return (
         f"DONE: {ticker} research complete "
-        f"(full report below; also saved to {report_path}).\n\n{full_report}"
+        f"(full report below; also saved to {report_path}).\n\n{complete_report}"
     )
 
 def run_in_background(ticker: str, mode: str = "full") -> str:
@@ -1029,8 +1405,8 @@ def run_in_background(ticker: str, mode: str = "full") -> str:
     log_path = os.path.join(log_dir, f"{ticker}-{trade_date}{_mode_suffix(mode)}.log")
 
     eta = "~3 minutes" if mode == "deep" else "~9 minutes"
-    resend_cmd = f"python3 {SCRIPT_PATH} {ticker} --resend" + (
-        " --deep" if mode == "deep" else "")
+    mode_flag = " --deep" if mode == "deep" else " --full"
+    resend_cmd = f"python3 {SCRIPT_PATH} {ticker} --resend{mode_flag}"
 
     try:
         # sys.executable = hermes venv python3 (#4)
@@ -1039,6 +1415,8 @@ def run_in_background(ticker: str, mode: str = "full") -> str:
         argv = [sys.executable, SCRIPT_PATH, ticker, "--background"]
         if mode == "deep":
             argv.append("--deep")
+        elif mode == "full":
+            argv.append("--full")
         with open(log_path, "w") as log_fh:
             proc = subprocess.Popen(
                 argv,
@@ -1067,8 +1445,14 @@ if __name__ == "__main__":
         mode = "quick"
     elif "--deep" in args or "--fast" in args:   # --fast: legacy alias
         mode = "deep"
-    else:
+    elif "--full" in args:
         mode = "full"
+    else:
+        # Be conservative for bare CLI calls. Product routing says
+        # research TICKER is the cheap quick tier; requiring --full prevents
+        # an accidental 9-minute full TradingAgents run when an upper layer
+        # forgets to pass an explicit mode flag.
+        mode = "quick"
     positional    = [a for a in args if not a.startswith("--")]
     ticker        = positional[0].upper() if positional else "NVDA"
 
