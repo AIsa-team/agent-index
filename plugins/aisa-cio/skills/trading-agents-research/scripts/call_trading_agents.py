@@ -1286,7 +1286,27 @@ def _rendered_report_path(ticker: str, trade_date: str,
     return os.path.join(CACHE_DIR, ticker,
                         f"{trade_date}{_mode_suffix(mode)}-rendered-{RENDERED_REPORT_VERSION}.txt")
 
-def run_and_report(ticker: str, resend: bool = False, mode: str = "full",
+def _detect_cached_mode(ticker: str, trade_date: str) -> str | None:
+    """Return today's most recently touched cached mode for resend auto-detect."""
+    candidates = []
+    for mode in VALID_MODES:
+        for path in (
+            _rendered_report_path(ticker, trade_date, mode),
+            _report_txt_path(ticker, trade_date, mode),
+            os.path.join(CACHE_DIR, ticker,
+                         f"{trade_date}{_mode_suffix(mode)}-result.json"),
+        ):
+            if os.path.exists(path):
+                try:
+                    candidates.append((os.path.getmtime(path), mode))
+                except OSError:
+                    pass
+    if not candidates:
+        return None
+    candidates.sort(reverse=True)
+    return candidates[0][1]
+
+def run_and_report(ticker: str, resend: bool = False, mode: str = "auto",
                    full_text: bool = False) -> str:
     """Run research (or load from cache with resend=True), then print a report.
 
@@ -1295,12 +1315,27 @@ def run_and_report(ticker: str, resend: bool = False, mode: str = "full",
     deep output is always available in the cached report.txt. The Hermes agent
     reads stdout and delivers it over its own reply channel.
     """
-    try:
-        mode = _normalize_mode(mode)
-    except ValueError as e:
-        return f"FAILED: {e}"
     ticker = ticker.upper()
     trade_date = date.today().isoformat()
+    raw_mode = (mode or "auto").strip().lower()
+    if raw_mode == "auto":
+        if resend:
+            detected = _detect_cached_mode(ticker, trade_date)
+            if not detected:
+                return (
+                    f"FAILED: No cached research result found for {ticker} "
+                    f"on {trade_date}. Run research/deep-research/full-report "
+                    "first."
+                )
+            mode = detected
+        else:
+            # Product routing: a bare run is the quick tier, never full.
+            mode = "quick"
+    else:
+        try:
+            mode = _normalize_mode(raw_mode)
+        except ValueError as e:
+            return f"FAILED: {e}"
 
     if mode == "quick" and not resend:
         return run_quick_research(ticker)
@@ -1381,7 +1416,7 @@ def run_and_report(ticker: str, resend: bool = False, mode: str = "full",
         f"(full report below; also saved to {report_path}).\n\n{complete_report}"
     )
 
-def run_in_background(ticker: str, mode: str = "full") -> str:
+def run_in_background(ticker: str, mode: str = "") -> str:
     """Launch deep/full research as a detached background process.
 
     Returns immediately with a STARTED: line (or FAILED: if the process could
@@ -1391,6 +1426,12 @@ def run_in_background(ticker: str, mode: str = "full") -> str:
     ~9 min full) the result is cached under {CACHE_DIR}/<TICKER>/ and can be
     retrieved with --resend [--deep].
     """
+    if not mode:
+        return (
+            "FAILED: background research requires explicit mode='deep' or "
+            "mode='full'. Plain `research TICKER` is quick and synchronous — "
+            "call run_quick_research(ticker)."
+        )
     try:
         mode = _normalize_mode(mode)
     except ValueError as e:
@@ -1456,7 +1497,10 @@ if __name__ == "__main__":
     positional    = [a for a in args if not a.startswith("--")]
     ticker        = positional[0].upper() if positional else "NVDA"
 
-    if mode == "quick" and not is_resend:
+    if is_background and mode == "quick":
+        print("FAILED: quick research cannot run in background — call "
+              "run_quick_research(ticker) / use `research TICKER` instead.")
+    elif mode == "quick" and not is_resend:
         # Quick tier is synchronous: run and print the report directly.
         print(run_quick_research(ticker))
     elif is_background or is_resend:

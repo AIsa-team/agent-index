@@ -20,6 +20,18 @@ description: "AUTO-INVOKE on the command forms `research TICKER` / `研究 TICKE
 One skill, three tiers. Pick the tier from the trigger word — never guess a
 deeper tier than the user asked for:
 
+## Absolute Routing Gate
+
+Read this before choosing any code path:
+
+- Exact `research TICKER` / `研究 TICKER` is **QUICK ONLY**. It must call
+  `run_quick_research(TICKER)` and return the report in the same response.
+  It must never call `run_in_background`, must never say "resend", and must
+  never estimate a 3- or 9-minute runtime.
+- Only exact `deep-research TICKER` / `深度研究 TICKER` and
+  `full-report TICKER` / `全量报告 TICKER` may use background launch +
+  `resend`.
+
 | Tier | Triggers | Pipeline | Runtime | Interaction |
 |---|---|---|---|---|
 | **quick** | `research [ticker]`, `研究 [ticker]` | NO multi-agent: price/technicals/fundamentals pull + ONE flash LLM call | < 1 min | **synchronous** — result comes back in the same call |
@@ -77,6 +89,9 @@ No background process, no resend dance, no ETA message needed.
 
 #### TIER 2 & 3 — DEEP / FULL (background launch)
 
+This section is forbidden for plain `research TICKER`. If the user typed
+plain `research TICKER`, stop here and use Tier 1 instead.
+
 **Step 1** — Extract the ticker (uppercase, strip whitespace) and set
 `<MODE>` from the trigger: `deep-research`/`深度研究` → `"deep"`,
 `full-report`/`全量报告` → `"full"`. Tell the user:
@@ -109,7 +124,7 @@ The output MUST start with exactly one of: `STARTED:`, `DONE:`, or `FAILED:`.
 
 #### HOW TO RETRIEVE A FINISHED DEEP/FULL REPORT
 
-When the user asks for the result (**"resend [ticker]"** / **"重新发送 [ticker]"** / "研究结果好了吗"), fetch it from cache without re-running. Use the **same mode** as the launch (each tier has its own cache; a FAILED line will tell you if today's result exists in another tier):
+When the user asks for the result (**"resend [ticker]"** / **"重新发送 [ticker]"** / "研究结果好了吗"), fetch it from cache without re-running. Use the **same mode** as the launch. If the mode is not obvious from the current conversation, use `mode="auto"` so the script finds today's latest cached tier instead of guessing:
 
 ```python
 import os, importlib.util, sys
@@ -120,7 +135,7 @@ mod = importlib.util.module_from_spec(spec)
 sys.modules["call_ta_module"] = mod
 spec.loader.exec_module(mod)
 
-status = mod.run_and_report(<TICKER>, resend=True, mode=<MODE>)
+status = mod.run_and_report(<TICKER>, resend=True, mode=<MODE_OR_AUTO>)
 print(status)
 ```
 
@@ -150,8 +165,11 @@ Use `execute_code` with `timeout=120` for this call (it only reads cache, no res
 #### Rules
 - **Command forms only.** Auto-invoke on `research TICKER` / `deep-research TICKER` / `full-report TICKER` / `研究 TICKER` / `深度研究 TICKER` / `全量报告 TICKER` — a trigger word followed by a ticker symbol. Do NOT auto-invoke on free-form prose that merely contains the word "research" ("do a deep dive on the chip cycle", "deep research on tariffs") — that is narrative research and belongs to `multi-source-search`. If the intent is ambiguous, ask which the user wants instead of burning a multi-minute run.
 - **Never escalate tiers on your own.** `research` runs quick — do not launch deep/full because you think the user "really wants" more depth. Mention the deeper tiers (the report footer already does) and let the user decide.
-- Call `run_in_background` **exactly ONCE** per research request — never loop or retry.
-- The result IS cached on disk after every successful run. Use **resend** to retrieve it — never a fresh run just to re-read a report.
+- Call `run_in_background` **exactly ONCE** per deep/full background request — never loop or retry.
+- Deep/full results are cached on disk after every successful background run.
+  Use **resend** to retrieve deep/full results — never a fresh run just to
+  re-read a report. Quick `research TICKER` returns immediately and should not
+  ask the user to resend.
 - The three tiers' caches are separate; a deep run never overwrites a full report (and vice versa).
 - If you get `FAILED:`, report the error to the user and stop. Do not retry automatically.
 - **Never** compose research content from memory — 100% of user-facing research comes from the report text printed by the script.

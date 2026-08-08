@@ -1,10 +1,10 @@
 # TradingAgents (TauricResearch) — OPTIONAL heavy dependency powering the
-# `deep TICKER` / `fast-research TICKER` research commands. Installed as a pip
+# `deep-research TICKER` / `full-report TICKER` research commands. Installed as a pip
 # git dependency (upstream ships pyproject.toml but has no official PyPI
 # release; the PyPI name `tradingagents` is a third-party fork — do NOT use it).
 #
 # Pinned to a commit SHA for reproducible builds (2026-07-25 upstream main;
 # picks up d78c698 same-day OHLCV cache refresh and 40774ca Yahoo news UTC
-# window fix). Bump deliberately: update the SHA, re-test `deep TICKER` and
-# `fast-research TICKER`, republish.
+# window fix). Bump deliberately: update the SHA, re-test `deep-research TICKER`
+# and `full-report TICKER`, republish.
 tradingagents @ git+https://github.com/TauricResearch/TradingAgents@a33fd4c0f134485a43553a2c23a63cb14adbd88f

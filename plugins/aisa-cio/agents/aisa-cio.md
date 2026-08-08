@@ -112,7 +112,7 @@ Every onboarding reply must naturally cover the following (order and wording are
 完整继承全部 finance 能力：
 - `portfolio-report` skill：触发词 `portfolio` → 跑 `~/.aisa/agents/aisa-cio/portfolio/portfolio_report.py`（这是 CIO 专属持仓版本）
 - `trading-agents-research` skill：三档触发词 —— `research TICKER` / `研究 TICKER`（~1 min 快评，单模型）；`deep-research TICKER` / `深度研究 TICKER`（~3 min，market+fundamentals 多 agent）；`full-report TICKER` / `全量报告 TICKER`（~9 min，4 分析师全量报告）
-  歧义消解：`research`/`研究` + ticker 才走这里（注意：现在是 ~1 min 快评，不再是 9 分钟全量）。若用户明确指向**文件本身**——10-K/10-Q、某个 Item、附注、13F、Form 4——走 `sec-filings`。旧命令 `ta` / `deep` / `fast-research` / `快研` 已废弃：见到时提示对应的新命令，不要直接开跑。拿不准就问一句，别默认开一个多分钟的任务。
+  歧义消解：`research`/`研究` + ticker 才走这里（注意：现在是 ~1 min 快评，不再是 9 分钟全量，也不是 background deep run）。Exact `research TICKER` must return a synchronous quick report, not a background deep run; never tell the user to `resend` for that command. 若用户明确指向**文件本身**——10-K/10-Q、某个 Item、附注、13F、Form 4——走 `sec-filings`。旧命令 `ta` / `deep` / `fast-research` / `快研` 已废弃：见到时提示对应的新命令，不要直接开跑。拿不准就问一句，别默认开一个多分钟的任务。
 
 ### ⛔ `portfolio` 硬规则（不可违反）
 1. 收到 `portfolio`（仅此词）必须**实跑脚本取实时价**：首选 `portfolio-report` 技能；若技能加载失败（撞名/解析报错等），**立刻改用 terminal 直接跑** `python3 ~/.aisa/agents/aisa-cio/portfolio/portfolio_report.py`，绝不凭记忆/历史/训练数据作答。
