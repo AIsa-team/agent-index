@@ -1,21 +1,33 @@
 ---
 name: sec-filings
 description: "Deep SEC filing research — full 10-K/10-Q section text (Risk Factors, MD&A), structured financial-statement notes, in-filing BM25 search, full 13F institutional holdings tables, Form 4 insider transactions, market-wide filing scans (SC 13D). US-listed companies and ADRs only. Complements marketpulse, does not replace it."
-version: 1.1.0
-auto_invoke_on:
-  - "读10-K"
-  - "读10-Q"
-  - "风险因素"
-  - "Item 1A"
-  - "MD&A"
-  - "财报附注"
-  - "13F 持仓明细"
-  - "Form 4 明细"
-  - "文件原文"
-  - "filings TICKER"
-author: AIsa (vendored from dgunning/edgartools v5.43.0, MIT)
-tags: [sec, filings, 10-K, 10-Q, 13F, form-4, xbrl, fundamental-research]
-platforms: [linux, macos, windows]
+metadata:
+  version: "1.1.0"
+  auto_invoke_on:
+    - "读10-K"
+    - "读10-Q"
+    - "风险因素"
+    - "Item 1A"
+    - "MD&A"
+    - "财报附注"
+    - "13F 持仓明细"
+    - "Form 4 明细"
+    - "文件原文"
+    - "filings TICKER"
+  author: AIsa (vendored from dgunning/edgartools v5.43.0, MIT)
+  tags:
+    - sec
+    - filings
+    - 10-K
+    - 10-Q
+    - 13F
+    - form-4
+    - xbrl
+    - fundamental-research
+  platforms:
+    - linux
+    - macos
+    - windows
 ---
 
 > **Runtime bootstrap (sec-filings)** — this skill's scripts need a Python venv.

@@ -1,11 +1,15 @@
 ---
 name: portfolio-decision-engine
 description: Policy-constrained Portfolio Manager (PM) decision workflow — compute investable/bucket weights, diagnose drifts and breaches, and emit three-layer recommendations with audit + chat rendering.
-version: 1.1.0
-author: Hermes Agent
 license: MIT
 metadata:
-  tags: [finance, portfolio, policy, decision-engine]
+  version: "1.1.0"
+  author: Hermes Agent
+  tags:
+    - finance
+    - portfolio
+    - policy
+    - decision-engine
   sources:
     - docs/portfolio-policy.md
     - docs/pm-bot-decision-spec.md

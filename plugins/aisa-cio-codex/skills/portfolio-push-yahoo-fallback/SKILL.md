@@ -1,9 +1,16 @@
 ---
 name: portfolio-push-yahoo-fallback
-title: Portfolio Push with Multi-Endpoint Yahoo Fallback
-category: finance
 description: Deterministic portfolio valuation and chat-friendly push using Yahoo multi-endpoint fallbacks (v7 quote → v8 chart → v7 spark), static valuation for MMF/StructNote/CODE items, at-cost valuation for HSBC 2028 bond, FX overrides, MMF safety allocation, ringfenced obligations, liabilities deduction, separate lots for duplicate tickers (e.g., 0700.HK A/B), JSON snapshotting, and cron scheduling at SGT 18:00 with manual /888 trigger.
-tags: [portfolio, yahoo, valuation, cron, fx, fallback]
+metadata:
+  title: Portfolio Push with Multi-Endpoint Yahoo Fallback
+  category: finance
+  tags:
+    - portfolio
+    - yahoo
+    - valuation
+    - cron
+    - fx
+    - fallback
 ---
 
 When to use

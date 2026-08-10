@@ -1,11 +1,12 @@
 ---
 name: portfolio-truth-import
-title: Portfolio Truth — Import and Normalization
 description: Robust workflow to ingest messy portfolio inputs (markdown/tables with line-break glitches) into portfolio_truth.json and portfolio_rules.json, with snapshots, symbol_map and needs_isin scaffolding.
-version: 1.0
-created: 2026-04-14
-owner: Hermes
-summary: Initialize and normalize portfolio data from semi-structured sources; handle HK broken rows, post-fill tickers, controlled CODE classes, rules writing, and snapshotting.
+metadata:
+  title: Portfolio Truth — Import and Normalization
+  version: "1.0"
+  created: "2026-04-14"
+  owner: Hermes
+  summary: Initialize and normalize portfolio data from semi-structured sources; handle HK broken rows, post-fill tickers, controlled CODE classes, rules writing, and snapshotting.
 ---
 
 When to use

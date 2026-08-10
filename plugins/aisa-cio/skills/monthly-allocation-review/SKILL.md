@@ -1,10 +1,14 @@
 ---
 name: monthly-allocation-review
 description: Monthly portfolio allocation review — load rules + latest valuation, compute bucket weights vs targets, identify rebalance candidates, enforce gold/cash/single-name caps, save JSON+TXT, and deliver a concise summary.
-version: 1.0.0
-author: Hermes Agent
 metadata:
-  tags: [finance, portfolio, review, monthly]
+  version: "1.0.0"
+  author: Hermes Agent
+  tags:
+    - finance
+    - portfolio
+    - review
+    - monthly
   sources:
     - ~/.hermes/portfolio/monthly_review.py
 ---
