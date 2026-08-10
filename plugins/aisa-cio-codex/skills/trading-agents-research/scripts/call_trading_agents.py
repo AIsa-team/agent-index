@@ -246,6 +246,16 @@ print("__TA_RESULT__:" + json.dumps(result, ensure_ascii=False))
 """
 
 VALID_MODES = ("quick", "deep", "full")
+COMMAND_RE = re.compile(
+    r"^\s*(?P<trigger>research|研究|deep-research|深度研究|full-report|全量报告|完整报告)\s+"
+    r"(?P<ticker>[A-Za-z][A-Za-z0-9.\-]*)\s*$",
+    re.IGNORECASE,
+)
+RETIRED_COMMAND_RE = re.compile(
+    r"^\s*(?P<trigger>fast-research|快研|ta|deep)\s+"
+    r"(?P<ticker>[A-Za-z][A-Za-z0-9.\-]*)\s*$",
+    re.IGNORECASE,
+)
 RENDERED_REPORT_VERSION = "v1"
 
 # Deep tier: official TradingAgentsGraph constructor arg — drop the News and
@@ -381,6 +391,51 @@ def _normalize_mode(mode: str) -> str:
     if mode not in VALID_MODES:
         raise ValueError(f"unknown research mode {mode!r} (expected one of {VALID_MODES})")
     return mode
+
+def _parse_research_command(command_text: str):
+    """Return (mode, ticker) for exact supported command forms only."""
+    match = COMMAND_RE.match(command_text or "")
+    if not match:
+        return None
+    trigger = match.group("trigger").lower()
+    ticker = match.group("ticker").upper()
+    if trigger in ("research", "研究"):
+        return "quick", ticker
+    if trigger in ("deep-research", "深度研究"):
+        return "deep", ticker
+    return "full", ticker
+
+def handle_research_command(command_text: str) -> str:
+    """Single safe entrypoint for user-facing stock research commands."""
+    parsed = _parse_research_command(command_text)
+    if parsed:
+        mode, ticker = parsed
+        if mode == "quick":
+            return run_quick_research(ticker)
+        return run_in_background(ticker, mode=mode, command_text=command_text)
+
+    retired = RETIRED_COMMAND_RE.match(command_text or "")
+    if retired:
+        trigger = retired.group("trigger").lower()
+        shown_trigger = retired.group("trigger")
+        ticker = retired.group("ticker").upper()
+        if trigger in ("fast-research", "快研"):
+            return (
+                f"DONE: `{shown_trigger} {ticker}` has been renamed. Use "
+                f"`deep-research {ticker}` for the ~3 min multi-agent brief, "
+                f"or `research {ticker}` for the ~1 min quick take. I did not "
+                "launch anything."
+            )
+        return (
+            f"DONE: `{shown_trigger} {ticker}` is retired. Choose "
+            f"`deep-research {ticker}` (~3 min) or `full-report {ticker}` "
+            "(~9 min complete report). I did not launch anything."
+        )
+
+    return (
+        "FAILED: Unrecognized research command. Use `research TICKER`, "
+        "`deep-research TICKER`, or `full-report TICKER`."
+    )
 
 def _build_runner_args(provider: str, ticker: str, trade_date: str,
                        mode: str = "full") -> dict | None:
@@ -1416,7 +1471,7 @@ def run_and_report(ticker: str, resend: bool = False, mode: str = "auto",
         f"(full report below; also saved to {report_path}).\n\n{complete_report}"
     )
 
-def run_in_background(ticker: str, mode: str = "") -> str:
+def run_in_background(ticker: str, mode: str = "", command_text: str = "") -> str:
     """Launch deep/full research as a detached background process.
 
     Returns immediately with a STARTED: line (or FAILED: if the process could
@@ -1440,6 +1495,31 @@ def run_in_background(ticker: str, mode: str = "") -> str:
         return ("FAILED: quick mode runs synchronously — call "
                 "run_quick_research(ticker) instead of run_in_background().")
     ticker = ticker.upper()
+    if command_text:
+        parsed = _parse_research_command(command_text)
+        if not parsed:
+            return (
+                "FAILED: background research requires an exact "
+                "`deep-research TICKER` or `full-report TICKER` command."
+            )
+        parsed_mode, parsed_ticker = parsed
+        if parsed_mode != mode or parsed_ticker != ticker:
+            return (
+                "FAILED: background research command mismatch. "
+                f"Command parsed as {parsed_mode}/{parsed_ticker}, but the "
+                f"caller requested {mode}/{ticker}."
+            )
+        if parsed_mode == "quick":
+            return (
+                "FAILED: `research TICKER` is quick and synchronous — call "
+                "run_quick_research(ticker)."
+            )
+    else:
+        return (
+            "FAILED: background research now requires the raw user command in "
+            "`command_text` so `research TICKER` cannot be escalated to a "
+            "multi-minute run by mistake."
+        )
     trade_date = date.today().isoformat()
     log_dir = os.environ.get("TA_LOG_DIR", os.path.expanduser("~/.tradingagents/logs"))
     os.makedirs(log_dir, exist_ok=True)
@@ -1510,4 +1590,8 @@ if __name__ == "__main__":
                              full_text=is_full_text))
     else:
         # Interactive / cron call: launch in background and return immediately.
-        print(run_in_background(ticker, mode))
+        command_text = (
+            f"deep-research {ticker}" if mode == "deep"
+            else f"full-report {ticker}"
+        )
+        print(run_in_background(ticker, mode, command_text=command_text))

@@ -24,8 +24,12 @@ deeper tier than the user asked for:
 
 Read this before choosing any code path:
 
+- For every exact command-form request, call
+  `handle_research_command(<RAW_USER_COMMAND>)` exactly once. Do not manually
+  choose `run_quick_research` or `run_in_background` from the trigger word.
+  The handler is the product routing gate.
 - Exact `research TICKER` / `研究 TICKER` is **QUICK ONLY**. It must call
-  `run_quick_research(TICKER)` and return the report in the same response.
+  `handle_research_command("research TICKER")` and return the report in the same response.
   It must never call `run_in_background`, must never say "resend", and must
   never estimate a 3- or 9-minute runtime.
 - Only exact `deep-research TICKER` / `深度研究 TICKER` and
@@ -39,8 +43,9 @@ Read this before choosing any code path:
 | **full** | `full-report [ticker]`, `全量报告 [ticker]`, `完整报告 [ticker]` | real TradingAgents: all 4 analysts (market/sentiment/news/fundamentals) + debate + risk + PM; hybrid pro+flash | ~9 min | background + resend |
 
 **Retired triggers**: `ta`, `deep`, `research`-as-full, `fast-research`, `快研`.
-If the user types one of these, do NOT launch anything. Reply with the
-closest command-specific replacement:
+If the user types one of these, do NOT launch anything manually. Call
+`handle_research_command(<RAW_USER_COMMAND>)` and deliver its replacement
+guidance verbatim:
 
 - `fast-research T` / `快研 T` → `deep-research T` (same intent: reduced multi-agent research, ~3 min).
 - `ta T` / `deep T` → ask whether they want `deep-research T` (~3 min) or `full-report T` (~9 min complete investment research report); if they clearly want the old complete TA run, point to `full-report T`.
@@ -61,8 +66,8 @@ immediately (also cached, `<date>-quick-report.txt`).
 
 #### TIER 1 — QUICK (`research TICKER`)
 
-Run ONE `execute_code` call with `timeout=120`. Replace `<TICKER>` with the
-uppercase ticker string (e.g. `"NVDA"`):
+Run ONE `execute_code` call with `timeout=120`. Replace `<RAW_USER_COMMAND>`
+with the exact user command string (e.g. `"research NVDA"`):
 
 ```python
 import os, importlib.util, sys
@@ -73,7 +78,7 @@ mod = importlib.util.module_from_spec(spec)
 sys.modules["call_ta_module"] = mod
 spec.loader.exec_module(mod)
 
-status = mod.run_quick_research(<TICKER>)
+status = mod.handle_research_command(<RAW_USER_COMMAND>)
 print(status)
 ```
 
@@ -92,12 +97,9 @@ No background process, no resend dance, no ETA message needed.
 This section is forbidden for plain `research TICKER`. If the user typed
 plain `research TICKER`, stop here and use Tier 1 instead.
 
-**Step 1** — Extract the ticker (uppercase, strip whitespace) and set
-`<MODE>` from the trigger: `deep-research`/`深度研究` → `"deep"`,
-`full-report`/`全量报告` → `"full"`. Tell the user:
-`Starting <mode> research for <TICKER>. This takes ~3 minutes (deep) / ~9 minutes (full) — ask me for the result later (e.g. "resend <TICKER>") and I will fetch the finished report.`
-
-**Step 2** — Call `execute_code` ONCE with `timeout=60`:
+Call `execute_code` ONCE with `timeout=60`. Replace `<RAW_USER_COMMAND>` with
+the exact user command string (e.g. `"deep-research NVDA"` or
+`"full-report NVDA"`):
 
 ```python
 import os, importlib.util, sys
@@ -108,11 +110,11 @@ mod = importlib.util.module_from_spec(spec)
 sys.modules["call_ta_module"] = mod
 spec.loader.exec_module(mod)
 
-status = mod.run_in_background(<TICKER>, mode=<MODE>)
+status = mod.handle_research_command(<RAW_USER_COMMAND>)
 print(status)
 ```
 
-**Step 3 — MANDATORY STATUS VALIDATION:**
+**MANDATORY STATUS VALIDATION:**
 
 The output MUST start with exactly one of: `STARTED:`, `DONE:`, or `FAILED:`.
 
