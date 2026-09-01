@@ -193,6 +193,25 @@
           }
         }
       }
+    },
+    "aisa-cmo": {
+      "name": "AIsa CMO",
+      "description": "TODO: Replace this placeholder with the reviewed AIsa CMO product description.",
+      "repo": "AIsa-team/agent-index",
+      "latest": "0.1.0",
+      "versions": {
+        "0.1.0": {
+          "targets": {
+            "hermes": {
+              "url": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.0/aisa-cmo-hermes-v0.1.0.tar.gz",
+              "sha256": "b96a3065b58bf9dc30ac0a17c5c8cc8314fce9dec55bc31dc33775307b4e5c8d",
+              "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.0/INSTALL-hermes.md",
+              "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.0/install-hermes.sh",
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.0/guide-prompt-hermes.txt"
+            }
+          }
+        }
+      }
     }
   }
 }
