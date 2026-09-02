@@ -1,11 +1,11 @@
 ---
 name: version-info
-description: "AUTO-INVOKE when user asks about the agent's version or update status. Triggers: version / 版本 / 版本信息 / update status / 更新状态 / self check / 自检. Reports installed version, index latest, pinned state, and update-loop health evidence."
+description: "AUTO-INVOKE when user asks about the agent's version or update status. Triggers: /version-info / version / 版本 / 版本信息 / update status / 更新状态 / self check / 自检. Reports installed version, index latest, pinned state, and update-loop health evidence."
 ---
 
 ## MANDATORY ROUTING RULE
 
-When the user asks any of: `version`, `版本`, `版本信息`, `你是哪个版本`, `update status`, `更新状态`, `自动更新正常吗`, `self check`, `自检` — you MUST run the script below and deliver its output. Do NOT answer version questions from memory: your session's system prompt is a snapshot from session creation and may be OLDER than what is on disk.
+When the user asks any of: `/version-info`, `version`, `版本`, `版本信息`, `你是哪个版本`, `update status`, `更新状态`, `自动更新正常吗`, `self check`, `自检` — you MUST run the script below and deliver its output. Do NOT answer version questions from memory: your session's system prompt is a snapshot from session creation and may be OLDER than what is on disk.
 
 ## How to invoke
 
@@ -29,8 +29,8 @@ The script prints the full report between `__REPORT_START__` and `__REPORT_END__
 
 ## What it reports
 
-1. **本地版本**（真源优先级）— `.agentspec-content/active.json`（E2B 内容更新器的 active release，最权威）→ `.agentspec.json` install marker（含 pinned）→ `agent.json` / `agent.lock.json` fallback；都没有则明确说这是 dev 环境或安装未完成。profile 目录自动推导：`PROFILE_DIR` env → `HERMES_HOME` env → 从脚本自身路径向上找 → `~/.aisa/agents/aisa-cio`。
-2. **索引 latest** — 拉取 `https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json` 比较。
+1. **本地版本**（真源优先级）— `.agentspec-content/active.json`（E2B 内容更新器的 active release，最权威）→ `.agentspec.json` install marker（含 pinned）→ `agent.json` / `agent.lock.json` fallback；都没有则明确说这是 dev 环境或安装未完成。Agent ID 从 `AGENT_SPEC_ID`、`PROFILE_ID` 和上述元数据动态解析；profile 目录自动推导：命令参数 → `PROFILE_DIR` → `HERMES_HOME` → 从脚本自身路径向上找 → 基于 `AGENT_SPEC_ID` / `PROFILE_ID` 的通用目录。
+2. **索引 latest** — 拉取 `AGENT_INDEX_URL`；未设置时使用公共 `https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json`。
 3. **更新循环健康度** — 读 `content-update.log`（`$HOME` 或 profile 下）尾部各轮 status + 最后活动时间，直接判断循环是否活着。
 4. **结论** — 已最新 / 落后（区分三种原因：pinned 契约行为 / 循环活跃时的 CDN 缓存延迟 / 循环停摆的真故障）/ 本地领先。
 5. **会话缓存提示** — 内容更新从下一会话生效；磁盘新版 ≠ 当前会话新版。

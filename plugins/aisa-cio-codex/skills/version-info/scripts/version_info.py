@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""version_info.py — CIO self-check: installed version, index latest, update health.
+"""version_info.py — AgentSpec self-check: installed version, index latest, update health.
 
 Pure stdlib. Determines the running agent's content version, compares with the
 public agent-index, and reads content-update-loop logs to judge updater health.
@@ -11,53 +11,99 @@ Version truth sources (priority order, per 2026-07-21 E2B field investigation):
      (E2B Level-2 layout; the authoritative content version)
   2. <profile>/.agentspec.json               — install marker (agentspec-v1 §4.1)
   3. <profile>/agent.json / agent.lock.json  — artifact/dev fallbacks
-Index: https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json
+Index: $AGENT_INDEX_URL, defaulting to the public AIsa agent-index.
 
 Profile dir resolution (priority order):
   1. argv[1]  2. $PROFILE_DIR  3. $HERMES_HOME  4. walk up from this script's
   own path to the nearest dir containing agent.json / SOUL.md / .env.example
-  5. ~/.aisa/agents/aisa-cio
+  5. ~/.hermes/profiles/$PROFILE_ID  6. ~/.aisa/agents/$AGENT_SPEC_ID
 """
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-INDEX_URL = "https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json"
+DEFAULT_INDEX_URL = "https://raw.githubusercontent.com/AIsa-team/agent-index/main/index.json"
 INDEX_TIMEOUT_S = 15
-DEFAULT_AGENT_ID = "aisa-cio"
 CDN_GRACE_S = 30 * 60          # index CDN cache can lag ~5-30 min after publish
 LOOP_STALE_S = 15 * 60         # no loop activity for this long => loop suspect
 LOG_TAIL_LINES = 8
+AGENT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 PROFILE_ANCHOR_FILES = ("agent.json", "SOUL.md", ".env.example")
+
+
+def profile_has_metadata(path: Path) -> bool:
+    return (any((path / f).exists() for f in PROFILE_ANCHOR_FILES)
+            or (path / ".agentspec.json").is_file()
+            or (path / ".agentspec-content" / "active.json").is_file())
 
 
 def resolve_profile_dir() -> Path:
     if len(sys.argv) > 1 and sys.argv[1].strip():
         return Path(sys.argv[1].strip()).expanduser()
-    for env in ("PROFILE_DIR", "HERMES_HOME"):
-        v = os.environ.get(env)
-        if v:
-            return Path(v).expanduser()
+    profile_dir = os.environ.get("PROFILE_DIR", "").strip()
+    if profile_dir:
+        return Path(profile_dir).expanduser()
+    # Hermes itself exports HERMES_HOME as the active profile. The updater CLI
+    # also uses HERMES_HOME, but there it can mean the ~/.hermes root. Accept it
+    # directly only when it actually looks like a profile.
+    hermes_home_raw = os.environ.get("HERMES_HOME", "").strip()
+    hermes_home = Path(hermes_home_raw).expanduser() if hermes_home_raw else None
+    if hermes_home and profile_has_metadata(hermes_home):
+        return hermes_home
     # walk up from the script itself: works for both
     #   <profile>/skills/version-info/scripts/version_info.py              (user skills)
     #   <profile>/.agentspec-content/current/skills/version-info/.../version_info.py (managed)
     here = Path(__file__).resolve()
     for anc in here.parents:
-        if any((anc / f).exists() for f in PROFILE_ANCHOR_FILES):
+        if profile_has_metadata(anc):
             return anc
-    return Path("~/.aisa/agents/aisa-cio").expanduser()
+    profile_id = (valid_agent_id(os.environ.get("PROFILE_ID"))
+                  or valid_agent_id(os.environ.get("AGENT_SPEC_ID")))
+    if profile_id:
+        hermes_root = hermes_home or (Path.home() / ".hermes")
+        candidate = hermes_root / "profiles" / profile_id
+        if profile_has_metadata(candidate):
+            return candidate
+        # Preserve a useful incomplete-install path without treating an
+        # unvalidated HERMES_HOME root as the profile itself.
+        return candidate
+    agent_id = env_agent_id()
+    if agent_id:
+        return Path.home() / ".aisa" / "agents" / agent_id
+    # Deliberately do not guess a concrete Agent. The normal installed/baked
+    # layouts are found above; this sentinel makes incomplete dev setups loud.
+    return Path.home() / ".aisa" / "agents" / "unknown-agent"
+
+
+def valid_agent_id(value):
+    if isinstance(value, str):
+        value = value.strip()
+        if AGENT_ID_RE.fullmatch(value):
+            return value
+    return None
+
+
+def env_agent_id():
+    return (valid_agent_id(os.environ.get("AGENT_SPEC_ID"))
+            or valid_agent_id(os.environ.get("PROFILE_ID")))
+
+
+def resolve_index_url() -> str:
+    return os.environ.get("AGENT_INDEX_URL", "").strip() or DEFAULT_INDEX_URL
 
 
 def read_json(path: Path):
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            value = json.load(f)
+            return value if isinstance(value, dict) else None
     except (OSError, json.JSONDecodeError):
         return None
 
@@ -81,8 +127,11 @@ def fmt_age(epoch: float) -> str:
 
 
 def fmt_ts(epoch: float) -> str:
-    dt = datetime.fromtimestamp(epoch, tz=timezone.utc).astimezone()
-    return f"{dt.strftime('%Y-%m-%d %H:%M:%S %Z')} ({fmt_age(epoch)})"
+    try:
+        dt = datetime.fromtimestamp(float(epoch), tz=timezone.utc).astimezone()
+        return f"{dt.strftime('%Y-%m-%d %H:%M:%S %Z')} ({fmt_age(float(epoch))})"
+    except (TypeError, ValueError, OSError, OverflowError):
+        return f"invalid timestamp ({epoch!r})"
 
 
 def fmt_mtime(path: Path) -> str:
@@ -92,13 +141,28 @@ def fmt_mtime(path: Path) -> str:
         return "unreadable"
 
 
-def fetch_index():
-    req = urllib.request.Request(INDEX_URL, headers={"User-Agent": "aisa-cio-version-info/2"})
+def fetch_index(index_url: str, agent_id):
+    user_agent_id = agent_id or "aisa-agent"
     try:
+        req = urllib.request.Request(index_url, headers={"User-Agent": f"{user_agent_id}-version-info/3"})
         with urllib.request.urlopen(req, timeout=INDEX_TIMEOUT_S) as resp:
-            return json.loads(resp.read().decode("utf-8")), None
+            value = json.loads(resp.read().decode("utf-8"))
+            if not isinstance(value, dict):
+                return None, "ValueError: index root must be a JSON object"
+            agents = value.get("agents")
+            if not isinstance(agents, dict):
+                return None, "ValueError: index.agents must be a JSON object"
+            entry = agents.get(agent_id, {})
+            if not isinstance(entry, dict):
+                return None, f"ValueError: index entry for {agent_id} must be a JSON object"
+            latest = entry.get("latest")
+            if latest is not None and not isinstance(latest, str):
+                return None, f"ValueError: index latest for {agent_id} must be a string"
+            return value, None
     except Exception as e:  # network / parse — report, never crash
-        return None, f"{type(e).__name__}: {e}"
+        # Exception strings from urllib can repeat the full URL, including a
+        # private deployment's signed query parameters. Keep only the class.
+        return None, f"{type(e).__name__}: request or parse failed"
 
 
 def find_update_log(pdir: Path):
@@ -112,15 +176,13 @@ def find_update_log(pdir: Path):
 
 def main() -> int:
     pdir = resolve_profile_dir()
-    lines = []
+    index_url = resolve_index_url()
+    lines = ["", f"profile dir: {pdir}", ""]
     ok = True
 
-    lines.append("=== CIO version & update self-check ===")
-    lines.append(f"profile dir: {pdir}")
-    lines.append("")
-
     # --- 1. local version (truth-source priority) ---
-    agent_id = DEFAULT_AGENT_ID
+    agent_id = None
+    identity_evidence = []
     local_version = None
     local_source = None
     pinned = None
@@ -128,13 +190,16 @@ def main() -> int:
 
     active = read_json(pdir / ".agentspec-content" / "active.json")
     if active and active.get("version"):
-        agent_id = active.get("agentId", agent_id)
+        active_id = valid_agent_id(active.get("agentId"))
+        if active_id:
+            identity_evidence.append(("active.json", active_id))
+        agent_id = active_id
         local_version = active["version"]
         local_source = ".agentspec-content/active.json (content updater active release)"
         updated_at = active.get("updatedAt")
         lines.append(f"[local version] {local_version}  ← {local_source}")
         lines.append(f"  release={active.get('release')}")
-        if updated_at:
+        if updated_at is not None:
             lines.append(f"  content switch time: {fmt_ts(updated_at)}")
         rels = pdir / ".agentspec-content" / "releases"
         if rels.is_dir():
@@ -143,9 +208,13 @@ def main() -> int:
 
     marker = read_json(pdir / ".agentspec.json")
     if marker:
-        pinned = marker.get("pinned")
+        marker_id = valid_agent_id(marker.get("id"))
+        if marker_id:
+            identity_evidence.append((".agentspec.json", marker_id))
+        if agent_id is None:
+            agent_id = marker_id
         if local_version is None:
-            agent_id = marker.get("id", agent_id)
+            pinned = marker.get("pinned")
             local_version = marker.get("version")
             local_source = ".agentspec.json (install marker)"
             lines.append(f"[local version] {local_version}  ← {local_source}")
@@ -155,25 +224,60 @@ def main() -> int:
         for fb_name in ("agent.json", "agent.lock.json"):
             fb = read_json(pdir / fb_name)
             if fb and fb.get("version"):
-                agent_id = fb.get("agent") or fb.get("id") or agent_id
+                fallback_id = valid_agent_id(fb.get("agent")) or valid_agent_id(fb.get("id"))
+                if fallback_id:
+                    identity_evidence.append((fb_name, fallback_id))
+                if agent_id is None:
+                    agent_id = fallback_id
                 local_version = fb["version"]
                 local_source = f"{fb_name} (fallback)"
                 lines.append(f"[local version] {local_version}  ← {local_source}")
                 break
+    # Version may already have come from active/marker while that record omitted
+    # an id. Continue the same metadata priority solely to fill the missing id.
+    if agent_id is None:
+        for fb_name in ("agent.json", "agent.lock.json"):
+            fb = read_json(pdir / fb_name)
+            if fb:
+                fallback_id = valid_agent_id(fb.get("agent")) or valid_agent_id(fb.get("id"))
+                if fallback_id:
+                    identity_evidence.append((fb_name, fallback_id))
+                agent_id = fallback_id
+                if agent_id:
+                    break
+    for env_name in ("AGENT_SPEC_ID", "PROFILE_ID"):
+        candidate_id = valid_agent_id(os.environ.get(env_name))
+        if candidate_id:
+            identity_evidence.append((f"${env_name}", candidate_id))
+    agent_id = agent_id or env_agent_id()
     if local_version is None:
         lines.append("[local version] ⚠️ no version info found — dev environment (not installer-installed) or install incomplete.")
+    distinct_ids = {value for _, value in identity_evidence}
+    if len(distinct_ids) > 1:
+        evidence = ", ".join(f"{source}={value}" for source, value in identity_evidence)
+        lines.append(f"[identity warning] conflicting Agent IDs ({evidence}); using {agent_id} by metadata priority.")
     lines.append("")
+    lines[0] = f"=== {agent_id or 'unknown Agent'} version & update self-check ==="
 
     # --- 2. index latest ---
-    index, index_err = fetch_index()
+    index = None
+    index_err = None
     latest = None
-    if index:
+    index_source = "custom AGENT_INDEX_URL" if os.environ.get("AGENT_INDEX_URL", "").strip() else DEFAULT_INDEX_URL
+    # Never echo a custom URL: private deployments may carry signed query
+    # parameters or embedded credentials.
+    lines.append(f"[central index] source = {index_source}")
+    if agent_id:
+        index, index_err = fetch_index(index_url, agent_id)
+    else:
+        index_err = "agent id unavailable (set AGENT_SPEC_ID or install valid AgentSpec metadata)"
+    if index is not None:
         entry = (index.get("agents") or {}).get(agent_id) or {}
         latest = entry.get("latest")
-        lines.append(f"[central index] latest = {latest or '(' + agent_id + ' not in index)'}")
+        lines.append(f"  latest = {latest or '(' + agent_id + ' not in index)'}")
     else:
         ok = False
-        lines.append(f"[central index] fetch failed: {index_err}")
+        lines.append(f"  fetch failed: {index_err}")
         lines.append("  ⚠️ cannot determine whether behind latest.")
     lines.append("")
 
@@ -191,8 +295,8 @@ def main() -> int:
             for ln in tail:
                 try:
                     j = json.loads(ln)
-                    last_status = j.get("status", last_status)
-                    lines.append(f"    {j.get('status','?'):9s} version={j.get('version','?')}")
+                    last_status = str(j.get("status", last_status or "?"))
+                    lines.append(f"    {last_status:9s} version={j.get('version','?')}")
                 except (json.JSONDecodeError, AttributeError):
                     lines.append(f"    {ln[-120:]}")
             if not loop_recent:
