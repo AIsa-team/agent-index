@@ -248,7 +248,8 @@
               "sha256": "7965822b0d6ce8786bcea10812d295d85dad8b5ce6d4d54a0c65562936404f68",
               "installMd": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.3/INSTALL-hermes.md",
               "installSh": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.3/install-hermes.sh",
-              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.3/guide-prompt-hermes.txt"
+              "guidePrompt": "https://github.com/AIsa-team/agent-index/releases/download/aisa-cmo-v0.1.3/guide-prompt-hermes.txt",
+              "e2bTemplate": "hermes-aisa-cmo-0-1-3"
             }
           }
         }
